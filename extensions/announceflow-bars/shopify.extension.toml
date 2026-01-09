@@ -1,0 +1,10 @@
+api_version = "2024-10"
+name = "AnnounceFlow Bars"
+type = "theme_app_extension"
+
+[settings]
+  [[settings.fields]]
+    key = "app_enabled"
+    type = "boolean"
+    name = "Enable AnnounceFlow"
+    default = true

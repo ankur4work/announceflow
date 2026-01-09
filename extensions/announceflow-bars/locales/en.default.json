@@ -1,0 +1,60 @@
+{
+  "announceflow": {
+    "accessibility": {
+      "announcement": "Store announcement",
+      "close": "Close announcement"
+    },
+    "blocks": {
+      "announcement_bar": {
+        "name": "Announcement Bar",
+        "settings": {
+          "message": {
+            "label": "Message"
+          },
+          "show_cta": {
+            "label": "Show call-to-action button"
+          },
+          "cta_text": {
+            "label": "Button text"
+          },
+          "cta_link": {
+            "label": "Button link"
+          },
+          "cta_style": {
+            "label": "Button style",
+            "options": {
+              "primary": "Primary (filled)",
+              "secondary": "Secondary (outlined)",
+              "link": "Link (underlined)"
+            }
+          },
+          "background_color": {
+            "label": "Background color"
+          },
+          "text_color": {
+            "label": "Text color"
+          },
+          "font_size": {
+            "label": "Font size"
+          },
+          "padding_vertical": {
+            "label": "Vertical padding"
+          },
+          "position": {
+            "label": "Position",
+            "options": {
+              "top": "Top of page",
+              "bottom": "Bottom of page"
+            }
+          },
+          "sticky": {
+            "label": "Sticky (stays visible on scroll)"
+          },
+          "dismissible": {
+            "label": "Show close button"
+          }
+        }
+      }
+    }
+  }
+}
