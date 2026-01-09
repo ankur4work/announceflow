@@ -1,0 +1,428 @@
+{% comment %}
+  AnnounceFlow Announcement Bar Block
+  Supports: promotional, announcement, countdown types
+  Reads from shop.metafields.announceflow.bars_config
+{% endcomment %}
+
+{{ 'announceflow.css' | asset_url | stylesheet_tag }}
+
+{% liquid
+  assign metafield_config = shop.metafields.announceflow.bars_config.value
+  assign active_bar = null
+
+  if metafield_config != blank
+    assign bars_data = metafield_config.bars
+    for bar in bars_data
+      if bar.enabled == true
+        assign active_bar = bar
+        break
+      endif
+    endfor
+  endif
+
+  if active_bar != null
+    assign bar_id = 'announceflow-bar-' | append: active_bar.id
+    assign bar_type = active_bar.type | default: 'promotional'
+    assign message = active_bar.content.text
+    assign cta_text = active_bar.content.cta_text
+    assign cta_link = active_bar.content.cta_link
+    assign cta_style = active_bar.content.cta_style | default: 'primary'
+    assign end_datetime = active_bar.content.end_datetime
+    assign expired_text = active_bar.content.expired_text | default: 'This offer has ended'
+    assign bg_color = active_bar.style.bg_color | default: '#000000'
+    assign text_color = active_bar.style.text_color | default: '#FFFFFF'
+    assign position = active_bar.style.position | default: 'top'
+    assign sticky = active_bar.style.sticky | default: false
+    assign font_size = active_bar.style.font_size | default: 'medium'
+    assign padding_y = active_bar.style.padding_vertical | default: 12
+    assign dismissible = active_bar.settings.dismissible | default: true
+    assign hide_when_expired = active_bar.settings.hide_when_expired | default: false
+    assign show_cta = false
+    if cta_text != blank and cta_link != blank
+      assign show_cta = true
+    endif
+    assign data_source = 'metafield'
+    assign bar_unique_id = active_bar.id
+  else
+    assign bar_id = 'announceflow-bar-' | append: block.id
+    assign bar_type = block.settings.bar_type | default: 'promotional'
+    assign message = block.settings.message
+    assign cta_text = block.settings.cta_text
+    assign cta_link = block.settings.cta_link
+    assign cta_style = block.settings.cta_style
+    assign end_datetime = block.settings.end_datetime
+    assign expired_text = block.settings.expired_text | default: 'This offer has ended'
+    assign bg_color = block.settings.background_color
+    assign text_color = block.settings.text_color
+    assign position = block.settings.position
+    assign sticky = block.settings.sticky
+    assign font_size = block.settings.font_size | append: 'px'
+    assign padding_y = block.settings.padding_vertical
+    assign dismissible = block.settings.dismissible
+    assign hide_when_expired = block.settings.hide_when_expired | default: false
+    assign show_cta = block.settings.show_cta
+    assign data_source = 'settings'
+    assign bar_unique_id = block.id
+  endif
+
+  if data_source == 'metafield'
+    case font_size
+      when 'small'
+        assign font_size_px = 12
+      when 'large'
+        assign font_size_px = 18
+      else
+        assign font_size_px = 14
+    endcase
+  else
+    assign font_size_px = font_size | remove: 'px' | plus: 0
+  endif
+
+  assign btn_bg = text_color
+  assign btn_text = bg_color
+%}
+
+{% if message != blank %}
+  <div
+    id="{{ bar_id }}"
+    class="announceflow-bar announceflow-bar--{{ position }} announceflow-bar--{{ bar_type }}{% if sticky %} announceflow-bar--sticky{% endif %}"
+    style="--af-bg: {{ bg_color }}; --af-text: {{ text_color }}; --af-font-size: {{ font_size_px }}px; --af-padding-y: {{ padding_y }}px; --af-btn-bg: {{ btn_bg }}; --af-btn-text: {{ btn_text }};"
+    role="banner"
+    aria-label="Store announcement"
+    data-announceflow-bar
+    data-bar-id="{{ bar_unique_id }}"
+    data-bar-type="{{ bar_type }}"
+    data-source="{{ data_source }}"
+    {% if bar_type == 'countdown' %}
+      data-end-datetime="{{ end_datetime }}"
+      data-expired-text="{{ expired_text | escape }}"
+      data-hide-when-expired="{{ hide_when_expired }}"
+    {% endif %}
+  >
+    <div class="announceflow-bar__inner">
+      <div class="announceflow-bar__content">
+        <p class="announceflow-bar__message">{{- message -}}</p>
+
+        {% if bar_type == 'countdown' %}
+          <div class="announceflow-countdown" data-countdown-display>
+            <div class="announceflow-countdown__unit">
+              <span class="announceflow-countdown__value" data-days>00</span>
+              <span class="announceflow-countdown__label">Days</span>
+            </div>
+            <span class="announceflow-countdown__separator">:</span>
+            <div class="announceflow-countdown__unit">
+              <span class="announceflow-countdown__value" data-hours>00</span>
+              <span class="announceflow-countdown__label">Hrs</span>
+            </div>
+            <span class="announceflow-countdown__separator">:</span>
+            <div class="announceflow-countdown__unit">
+              <span class="announceflow-countdown__value" data-minutes>00</span>
+              <span class="announceflow-countdown__label">Min</span>
+            </div>
+            <span class="announceflow-countdown__separator">:</span>
+            <div class="announceflow-countdown__unit">
+              <span class="announceflow-countdown__value" data-seconds>00</span>
+              <span class="announceflow-countdown__label">Sec</span>
+            </div>
+          </div>
+          <p class="announceflow-bar__expired" data-expired-message style="display: none;">{{ expired_text }}</p>
+        {% endif %}
+
+        {% if show_cta and cta_text != blank and bar_type != 'countdown' %}
+          <a href="{{ cta_link }}" class="announceflow-bar__cta announceflow-bar__cta--{{ cta_style }}">{{- cta_text -}}</a>
+        {% endif %}
+      </div>
+
+      {% if dismissible %}
+        <button type="button" class="announceflow-bar__close" aria-label="Close announcement" data-announceflow-dismiss="{{ bar_id }}">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<script>
+/**
+ * AnnounceFlow - Announcement Bar JavaScript
+ * Handles bar visibility, dismiss functionality, and countdown timers
+ */
+(function() {
+  'use strict';
+
+  // Configuration
+  var STORAGE_PREFIX = 'af_dismissed_';
+  var DISMISS_DURATION = 86400000; // 24 hours in milliseconds
+  var countdownIntervals = {};
+
+  /**
+   * Initialize all announcement bars on the page
+   * - Check if previously dismissed
+   * - Show with animation
+   * - Initialize countdown timers
+   */
+  function init() {
+    var bars = document.querySelectorAll('[data-announceflow-bar]');
+    bars.forEach(function(bar) {
+      var barId = bar.getAttribute('data-bar-id');
+      var barType = bar.getAttribute('data-bar-type');
+
+      // Don't show if user previously dismissed
+      if (isDismissed(barId)) {
+        bar.style.display = 'none';
+        return;
+      }
+
+      // Show bar with CSS transition animation
+      bar.classList.add('announceflow-bar--visible');
+
+      // Initialize countdown if applicable
+      if (barType === 'countdown') {
+        initCountdown(bar);
+      }
+    });
+
+    // Attach dismiss handlers
+    var closeButtons = document.querySelectorAll('[data-announceflow-dismiss]');
+    closeButtons.forEach(function(btn) {
+      btn.addEventListener('click', handleDismiss);
+    });
+  }
+
+  /**
+   * Check if a bar was previously dismissed and is still within dismiss duration
+   * Uses localStorage with automatic expiry
+   */
+  function isDismissed(barId) {
+    try {
+      var dismissedAt = localStorage.getItem(STORAGE_PREFIX + barId);
+      if (!dismissedAt) return false;
+
+      var timestamp = parseInt(dismissedAt, 10);
+      // Clear expired dismissals
+      if (Date.now() - timestamp > DISMISS_DURATION) {
+        localStorage.removeItem(STORAGE_PREFIX + barId);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      // localStorage might be unavailable (private browsing, etc.)
+      return false;
+    }
+  }
+
+  /**
+   * Handle dismiss button click
+   * - Stop any countdown timers
+   * - Animate out and hide
+   * - Store dismissal in localStorage
+   */
+  function handleDismiss(event) {
+    var btn = event.currentTarget;
+    var targetId = btn.getAttribute('data-announceflow-dismiss');
+    var bar = document.getElementById(targetId);
+    if (!bar) return;
+
+    var barId = bar.getAttribute('data-bar-id');
+
+    // Clear countdown interval if running
+    if (countdownIntervals[barId]) {
+      clearInterval(countdownIntervals[barId]);
+      delete countdownIntervals[barId];
+    }
+
+    // Animate out
+    bar.classList.add('announceflow-bar--dismissing');
+    bar.classList.remove('announceflow-bar--visible');
+
+    // Store dismissal
+    try {
+      localStorage.setItem(STORAGE_PREFIX + barId, Date.now().toString());
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+
+    // Hide after animation completes
+    setTimeout(function() {
+      bar.style.display = 'none';
+    }, 300);
+  }
+
+  /**
+   * Initialize countdown timer for a bar
+   * Handles real-time countdown, expiration, and urgent state (final minute)
+   */
+  function initCountdown(bar) {
+    var barId = bar.getAttribute('data-bar-id');
+    var endDatetime = bar.getAttribute('data-end-datetime');
+    var hideWhenExpired = bar.getAttribute('data-hide-when-expired') === 'true';
+
+    if (!endDatetime) return;
+
+    var endDate = new Date(endDatetime);
+    // Silently fail if invalid date - don't log to console in production
+    if (isNaN(endDate.getTime())) return;
+
+    var daysEl = bar.querySelector('[data-days]');
+    var hoursEl = bar.querySelector('[data-hours]');
+    var minutesEl = bar.querySelector('[data-minutes]');
+    var secondsEl = bar.querySelector('[data-seconds]');
+    var countdownDisplay = bar.querySelector('[data-countdown-display]');
+    var expiredMessage = bar.querySelector('[data-expired-message]');
+    var messageEl = bar.querySelector('.announceflow-bar__message');
+
+    function updateCountdown() {
+      var now = new Date().getTime();
+      var target = endDate.getTime();
+      var diff = target - now;
+
+      // Handle expiration
+      if (diff <= 0) {
+        clearInterval(countdownIntervals[barId]);
+        delete countdownIntervals[barId];
+        bar.classList.remove('announceflow-bar--urgent');
+
+        if (hideWhenExpired) {
+          bar.classList.add('announceflow-bar--dismissing');
+          setTimeout(function() { bar.style.display = 'none'; }, 300);
+        } else {
+          if (countdownDisplay) countdownDisplay.style.display = 'none';
+          if (messageEl) messageEl.style.display = 'none';
+          if (expiredMessage) expiredMessage.style.display = 'block';
+          bar.classList.add('announceflow-bar--expired');
+        }
+        return;
+      }
+
+      // Add urgent class when less than 1 minute remaining (for pulse animation)
+      if (diff <= 60000) {
+        bar.classList.add('announceflow-bar--urgent');
+      } else {
+        bar.classList.remove('announceflow-bar--urgent');
+      }
+
+      var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (daysEl) daysEl.textContent = padZero(days);
+      if (hoursEl) hoursEl.textContent = padZero(hours);
+      if (minutesEl) minutesEl.textContent = padZero(minutes);
+      if (secondsEl) secondsEl.textContent = padZero(seconds);
+    }
+
+    /**
+     * Pad single digit numbers with leading zero
+     * For days > 99, show as-is (e.g., 100, 365)
+     */
+    function padZero(num) {
+      if (num >= 100) return String(num);
+      return num < 10 ? '0' + num : String(num);
+    }
+
+    updateCountdown();
+    countdownIntervals[barId] = setInterval(updateCountdown, 1000);
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  /**
+   * Public API - Available globally as window.AnnounceFlow
+   * Allows programmatic control of announcement bars
+   */
+  window.AnnounceFlow = {
+    /**
+     * Programmatically dismiss a bar by ID
+     * @param {string} barId - The bar's unique identifier
+     */
+    dismiss: function(barId) {
+      var bar = document.querySelector('[data-bar-id="' + barId + '"]');
+      if (bar) {
+        var btn = bar.querySelector('[data-announceflow-dismiss]');
+        if (btn) btn.click();
+      }
+    },
+
+    /**
+     * Re-show a previously dismissed bar
+     * @param {string} barId - The bar's unique identifier
+     */
+    show: function(barId) {
+      try {
+        localStorage.removeItem(STORAGE_PREFIX + barId);
+      } catch (e) {}
+      var bar = document.querySelector('[data-bar-id="' + barId + '"]');
+      if (bar) {
+        bar.style.display = '';
+        bar.classList.remove('announceflow-bar--dismissing');
+        bar.classList.add('announceflow-bar--visible');
+      }
+    },
+
+    /**
+     * Check if a bar is currently visible
+     * @param {string} barId - The bar's unique identifier
+     * @returns {boolean}
+     */
+    isVisible: function(barId) {
+      var bar = document.querySelector('[data-bar-id="' + barId + '"]');
+      return bar && bar.style.display !== 'none' && bar.classList.contains('announceflow-bar--visible');
+    },
+
+    /**
+     * Get remaining time for a countdown bar in milliseconds
+     * @param {string} barId - The bar's unique identifier
+     * @returns {number|null} - Milliseconds remaining, 0 if expired, null if not a countdown
+     */
+    getTimeRemaining: function(barId) {
+      var bar = document.querySelector('[data-bar-id="' + barId + '"]');
+      if (!bar) return null;
+      var endDatetime = bar.getAttribute('data-end-datetime');
+      if (!endDatetime) return null;
+      var diff = new Date(endDatetime).getTime() - Date.now();
+      return diff > 0 ? diff : 0;
+    }
+  };
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Announcement Bar",
+  "target": "section",
+  "settings": [
+    { "type": "paragraph", "content": "Configure bars in the AnnounceFlow app. Settings below are fallback." },
+    { "type": "header", "content": "Bar Type" },
+    { "type": "select", "id": "bar_type", "label": "Type", "options": [{ "value": "promotional", "label": "Promotional" }, { "value": "announcement", "label": "Announcement" }, { "value": "countdown", "label": "Countdown Timer" }], "default": "promotional" },
+    { "type": "header", "content": "Content" },
+    { "type": "textarea", "id": "message", "label": "Message", "default": "Free shipping on orders over $50!" },
+    { "type": "header", "content": "Countdown Settings" },
+    { "type": "text", "id": "end_datetime", "label": "End Date/Time", "info": "Format: YYYY-MM-DDTHH:MM:SS (e.g., 2025-12-31T23:59:59)", "placeholder": "2025-12-31T23:59:59" },
+    { "type": "text", "id": "expired_text", "label": "Expired Message", "default": "This offer has ended", "info": "Shown when countdown reaches zero" },
+    { "type": "checkbox", "id": "hide_when_expired", "label": "Hide bar when expired", "default": false, "info": "If unchecked, shows expired message instead" },
+    { "type": "header", "content": "Call to Action" },
+    { "type": "checkbox", "id": "show_cta", "label": "Show CTA button", "default": false },
+    { "type": "text", "id": "cta_text", "label": "Button text", "default": "Shop Now" },
+    { "type": "url", "id": "cta_link", "label": "Button link" },
+    { "type": "select", "id": "cta_style", "label": "Button style", "options": [{ "value": "primary", "label": "Primary" }, { "value": "secondary", "label": "Secondary" }, { "value": "link", "label": "Link" }], "default": "primary" },
+    { "type": "header", "content": "Appearance" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#1a1a2e" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#ffffff" },
+    { "type": "range", "id": "font_size", "label": "Font size", "min": 12, "max": 20, "step": 1, "unit": "px", "default": 14 },
+    { "type": "range", "id": "padding_vertical", "label": "Vertical padding", "min": 8, "max": 20, "step": 2, "unit": "px", "default": 12 },
+    { "type": "header", "content": "Behavior" },
+    { "type": "select", "id": "position", "label": "Position", "options": [{ "value": "top", "label": "Top" }, { "value": "bottom", "label": "Bottom" }], "default": "top" },
+    { "type": "checkbox", "id": "sticky", "label": "Sticky", "default": false },
+    { "type": "checkbox", "id": "dismissible", "label": "Show close button", "default": true }
+  ],
+  "presets": [{ "name": "Announcement Bar", "category": "Promotional" }]
+}
+{% endschema %}

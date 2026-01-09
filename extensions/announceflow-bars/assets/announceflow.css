@@ -1,0 +1,461 @@
+/**
+ * AnnounceFlow - Announcement Bar Styles
+ * Mobile responsive, accessible, animated
+ */
+
+/* CSS Custom Properties (defaults) */
+.announceflow-bar {
+  --af-bg: #1a1a2e;
+  --af-text: #ffffff;
+  --af-font-size: 14px;
+  --af-padding-y: 12px;
+  --af-btn-bg: #ffffff;
+  --af-btn-text: #1a1a2e;
+}
+
+/* Base Bar Styles */
+.announceflow-bar {
+  background-color: var(--af-bg);
+  color: var(--af-text);
+  font-size: var(--af-font-size);
+  padding: var(--af-padding-y) 20px;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.announceflow-bar--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.announceflow-bar--bottom {
+  transform: translateY(100%);
+}
+
+.announceflow-bar--bottom.announceflow-bar--visible {
+  transform: translateY(0);
+}
+
+/* Sticky Behavior */
+.announceflow-bar--sticky.announceflow-bar--top {
+  position: sticky;
+  top: 0;
+}
+
+.announceflow-bar--sticky.announceflow-bar--bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Dismissing Animation */
+.announceflow-bar--dismissing {
+  opacity: 0;
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+
+.announceflow-bar--bottom.announceflow-bar--dismissing {
+  transform: translateY(100%);
+}
+
+/* Inner Container */
+.announceflow-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Content Area */
+.announceflow-bar__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Message Text */
+.announceflow-bar__message {
+  margin: 0;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* CTA Button - Base */
+.announceflow-bar__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: calc(var(--af-font-size) - 1px);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.announceflow-bar__cta:hover {
+  transform: translateY(-1px);
+}
+
+.announceflow-bar__cta:active {
+  transform: translateY(0);
+}
+
+.announceflow-bar__cta:focus {
+  outline: 2px solid var(--af-text);
+  outline-offset: 2px;
+}
+
+/* CTA - Primary */
+.announceflow-bar__cta--primary {
+  background-color: var(--af-btn-bg);
+  color: var(--af-btn-text);
+  padding: 8px 20px;
+  border-radius: 4px;
+  border: none;
+}
+
+.announceflow-bar__cta--primary:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* CTA - Secondary */
+.announceflow-bar__cta--secondary {
+  background-color: transparent;
+  color: var(--af-text);
+  padding: 7px 19px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+
+.announceflow-bar__cta--secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* CTA - Link */
+.announceflow-bar__cta--link {
+  background: none;
+  color: var(--af-text);
+  padding: 0;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.announceflow-bar__cta--link:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Close Button */
+.announceflow-bar__close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--af-text);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.announceflow-bar__close:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.announceflow-bar__close:focus {
+  outline: 2px solid var(--af-text);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.announceflow-bar__close svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+/* Tablet (768px) */
+@media screen and (max-width: 768px) {
+  .announceflow-bar {
+    padding: var(--af-padding-y) 16px;
+  }
+
+  .announceflow-bar__inner {
+    gap: 12px;
+    padding-right: 36px;
+  }
+
+  .announceflow-bar__content {
+    gap: 12px;
+  }
+
+  .announceflow-bar__cta--primary,
+  .announceflow-bar__cta--secondary {
+    padding: 6px 16px;
+  }
+
+  .announceflow-bar__close {
+    right: 0;
+    padding: 6px;
+  }
+}
+
+/* Mobile (576px) */
+@media screen and (max-width: 576px) {
+  .announceflow-bar {
+    padding: 10px 12px;
+  }
+
+  .announceflow-bar__inner {
+    padding-right: 32px;
+  }
+
+  .announceflow-bar__content {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .announceflow-bar__message {
+    font-size: calc(var(--af-font-size) - 1px);
+  }
+
+  .announceflow-bar__cta {
+    font-size: 12px;
+  }
+
+  .announceflow-bar__cta--primary,
+  .announceflow-bar__cta--secondary {
+    padding: 6px 14px;
+  }
+}
+
+/* Small Mobile (400px) */
+@media screen and (max-width: 400px) {
+  .announceflow-bar {
+    padding: 8px 10px;
+  }
+
+  .announceflow-bar__inner {
+    padding-right: 28px;
+  }
+
+  .announceflow-bar__message {
+    font-size: 12px;
+  }
+
+  .announceflow-bar__close {
+    padding: 4px;
+  }
+
+  .announceflow-bar__close svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .announceflow-bar,
+  .announceflow-bar__cta,
+  .announceflow-bar__close {
+    transition: none;
+  }
+
+  .announceflow-bar {
+    opacity: 1;
+    transform: none;
+  }
+
+  .announceflow-bar--dismissing {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+/* High Contrast */
+@media (prefers-contrast: high) {
+  .announceflow-bar__cta--secondary {
+    border-width: 2px;
+  }
+
+  .announceflow-bar__close:focus,
+  .announceflow-bar__cta:focus {
+    outline-width: 3px;
+  }
+}
+
+/* Print */
+@media print {
+  .announceflow-bar {
+    display: none !important;
+  }
+}
+
+/* =============================================
+   Countdown Timer Styles
+   ============================================= */
+
+.announceflow-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.announceflow-countdown__unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+  padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.announceflow-countdown__value {
+  font-size: calc(var(--af-font-size) + 4px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.announceflow-countdown__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  opacity: 0.8;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.announceflow-countdown__separator {
+  font-size: calc(var(--af-font-size) + 4px);
+  font-weight: 700;
+  opacity: 0.7;
+  margin: 0 2px;
+  align-self: flex-start;
+  padding-top: 4px;
+}
+
+/* Countdown bar specific layout */
+.announceflow-bar--countdown .announceflow-bar__content {
+  gap: 16px;
+}
+
+.announceflow-bar--countdown .announceflow-bar__message {
+  white-space: nowrap;
+}
+
+/* Expired state */
+.announceflow-bar--expired .announceflow-bar__expired {
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Countdown responsive - Tablet */
+@media screen and (max-width: 768px) {
+  .announceflow-countdown {
+    gap: 3px;
+  }
+
+  .announceflow-countdown__unit {
+    min-width: 40px;
+    padding: 3px 6px;
+  }
+
+  .announceflow-countdown__value {
+    font-size: calc(var(--af-font-size) + 2px);
+  }
+
+  .announceflow-countdown__label {
+    font-size: 9px;
+  }
+
+  .announceflow-countdown__separator {
+    font-size: calc(var(--af-font-size) + 2px);
+  }
+
+  .announceflow-bar--countdown .announceflow-bar__content {
+    gap: 12px;
+  }
+}
+
+/* Countdown responsive - Mobile */
+@media screen and (max-width: 576px) {
+  .announceflow-bar--countdown .announceflow-bar__content {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .announceflow-bar--countdown .announceflow-bar__message {
+    white-space: normal;
+  }
+
+  .announceflow-countdown__unit {
+    min-width: 36px;
+    padding: 2px 4px;
+  }
+
+  .announceflow-countdown__value {
+    font-size: var(--af-font-size);
+  }
+
+  .announceflow-countdown__label {
+    font-size: 8px;
+  }
+
+  .announceflow-countdown__separator {
+    font-size: var(--af-font-size);
+    margin: 0 1px;
+  }
+}
+
+/* Countdown responsive - Small Mobile */
+@media screen and (max-width: 400px) {
+  .announceflow-countdown__unit {
+    min-width: 32px;
+  }
+
+  .announceflow-countdown__label {
+    display: none;
+  }
+}
+
+/* Countdown animation - pulse on final minute */
+@keyframes announceflow-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.announceflow-bar--countdown.announceflow-bar--urgent .announceflow-countdown__value {
+  animation: announceflow-pulse 1s ease-in-out infinite;
+}
