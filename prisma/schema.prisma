@@ -13,6 +13,10 @@ datasource db {
   url      = "file:dev.sqlite"
 }
 
+// ============================================================================
+// Shopify Session (required by @shopify/shopify-app-remix)
+// ============================================================================
+
 model Session {
   id                  String    @id
   shop                String
@@ -31,4 +35,54 @@ model Session {
   emailVerified       Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+}
+
+// ============================================================================
+// Shop - Store-level data and settings
+// ============================================================================
+
+/// Plan types for shops
+enum PlanType {
+  FREE
+  PREMIUM
+}
+
+model Shop {
+  id            String    @id @default(uuid())
+  shopDomain    String    @unique
+  accessToken   String
+  plan          PlanType  @default(FREE)
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime?
+
+  // Relations
+  emailSubscribers EmailSubscriber[]
+
+  // Indexes
+  @@index([shopDomain])
+}
+
+// ============================================================================
+// EmailSubscriber - Captured emails from announcement bars
+// ============================================================================
+
+model EmailSubscriber {
+  id        String   @id @default(uuid())
+  shopId    String
+  email     String
+  barId     String   // Which announcement bar captured this email
+  createdAt DateTime @default(now())
+  ipAddress String?  // Optional IP for analytics/spam prevention
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  // Compound unique constraint - prevents duplicate emails per shop
+  // This allows the same email across different shops, but not within the same shop
+  @@unique([shopId, email], name: "shopId_email")
+
+  // Indexes for query performance
+  @@index([email])
+  @@index([shopId])
+  @@index([barId])
 }

@@ -47,8 +47,8 @@
     assign bar_id = 'announceflow-bar-' | append: block.id
     assign bar_type = 'promotional'
     assign message = block.settings.message
-    assign cta_text = ''
-    assign cta_link = ''
+    assign cta_text = block.settings.cta_text
+    assign cta_link = block.settings.cta_link
     assign cta_style = 'primary'
     assign end_datetime = ''
     assign expired_text = 'This offer has ended'
@@ -60,7 +60,7 @@
     assign padding_y = 12
     assign dismissible = block.settings.dismissible
     assign hide_when_expired = false
-    assign show_cta = false
+    assign show_cta = block.settings.show_cta
     assign data_source = 'settings'
     assign bar_unique_id = block.id
   endif
@@ -399,13 +399,16 @@
   "name": "Announcement Bar",
   "target": "section",
   "settings": [
-    { "type": "paragraph", "content": "For advanced options (countdown timers, CTAs, scheduling), use the AnnounceFlow app admin." },
+    { "type": "paragraph", "content": "Full configuration available in AnnounceFlow App." },
     { "type": "textarea", "id": "message", "label": "Message", "default": "Free shipping on orders over $50!" },
     { "type": "color", "id": "background_color", "label": "Background color", "default": "#1a1a2e" },
     { "type": "color", "id": "text_color", "label": "Text color", "default": "#ffffff" },
     { "type": "select", "id": "position", "label": "Position", "options": [{ "value": "top", "label": "Top" }, { "value": "bottom", "label": "Bottom" }], "default": "top" },
     { "type": "checkbox", "id": "sticky", "label": "Sticky", "default": false },
-    { "type": "checkbox", "id": "dismissible", "label": "Show close button", "default": true }
+    { "type": "checkbox", "id": "dismissible", "label": "Show close button", "default": true },
+    { "type": "url", "id": "cta_link", "label": "Link URL" },
+    { "type": "text", "id": "cta_text", "label": "Link Text", "default": "Shop Now" },
+    { "type": "checkbox", "id": "show_cta", "label": "Show Link", "default": true }
   ]
 }
 {% endschema %}

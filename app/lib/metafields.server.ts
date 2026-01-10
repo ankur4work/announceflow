@@ -3,9 +3,14 @@
  * GraphQL operations for reading/writing bar configurations to Shopify metafields
  */
 
-import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
+// import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
 import type { Bar, BarsConfig } from "./types";
 import { DEFAULT_BARS_CONFIG, createDefaultBar } from "./types";
+
+// Define a compatible interface for the admin client to avoid import issues
+interface AdminClient {
+  graphql: (query: string, variables?: Record<string, any>) => Promise<Response>;
+}
 
 // Metafield constants
 export const METAFIELD_NAMESPACE = "announceflow";
@@ -59,6 +64,35 @@ const GET_SHOP_ID_QUERY = `#graphql
   }
 `;
 
+// Generic get metafield query
+const GET_SHOP_METAFIELD_QUERY = `#graphql
+  query GetShopMetafield($namespace: String!, $key: String!) {
+    shop {
+      id
+      metafield(namespace: $namespace, key: $key) {
+        id
+        namespace
+        key
+        value
+        type
+      }
+    }
+  }
+`;
+
+// Generic delete metafield mutation
+const DELETE_SHOP_METAFIELD_MUTATION = `#graphql
+  mutation DeleteShopMetafield($id: ID!) {
+    metafieldDelete(input: {id: $id}) {
+      deletedId
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 /**
  * Type definitions for GraphQL responses
  */
@@ -90,6 +124,16 @@ interface MetafieldsSetResponse {
   };
 }
 
+interface MetafieldDeleteResponse {
+  metafieldDelete: {
+    deletedId: string;
+    userErrors: Array<{
+      field: string[];
+      message: string;
+    }>;
+  };
+}
+
 interface ShopIdResponse {
   shop: {
     id: string;
@@ -99,11 +143,138 @@ interface ShopIdResponse {
 /**
  * Get the shop's GID for metafield operations
  */
-async function getShopId(admin: AdminApiContext["admin"]): Promise<string> {
+async function getShopId(admin: AdminClient): Promise<string> {
   const response = await admin.graphql(GET_SHOP_ID_QUERY);
   const json = await response.json();
+
+  if (json.errors) {
+    console.error("GraphQL errors when fetching shop ID:", json.errors);
+    throw new Error(
+      json.errors.map((e: any) => e.message).join(", ") || "Failed to fetch shop ID"
+    );
+  }
+
   const data = json.data as ShopIdResponse;
+  if (!data?.shop?.id) {
+    throw new Error("Failed to get shop ID from response");
+  }
+
   return data.shop.id;
+}
+
+/**
+ * Generic: Get any shop metafield
+ */
+export async function getShopMetafield(
+  admin: AdminClient,
+  namespace: string,
+  key: string
+): Promise<any> {
+  try {
+    const response = await admin.graphql(GET_SHOP_METAFIELD_QUERY, {
+      variables: { namespace, key },
+    });
+    const json = await response.json();
+
+    if (json.errors) {
+      console.error(`GraphQL errors when fetching metafield ${namespace}.${key}:`, json.errors);
+      return null;
+    }
+
+    const data = json.data as ShopMetafieldResponse;
+    if (data.shop?.metafield?.value) {
+      const type = data.shop.metafield.type;
+      if (type === "json") {
+        try {
+          return JSON.parse(data.shop.metafield.value);
+        } catch (e) {
+          return data.shop.metafield.value;
+        }
+      }
+      return data.shop.metafield.value;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error reading metafield ${namespace}.${key}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Generic: Set any shop metafield
+ */
+export async function setShopMetafield(
+  admin: AdminClient,
+  namespace: string,
+  key: string,
+  value: any,
+  type: string = "json"
+): Promise<void> {
+  try {
+    const shopId = await getShopId(admin);
+    const serializedValue = type === "json" ? JSON.stringify(value) : String(value);
+
+    const response = await admin.graphql(SET_BARS_CONFIG_MUTATION, {
+      variables: {
+        metafields: [
+          {
+            ownerId: shopId,
+            namespace,
+            key,
+            type,
+            value: serializedValue,
+          },
+        ],
+      },
+    });
+
+    const json = await response.json();
+    if (json.errors) {
+      console.error(`GraphQL errors when setting metafield ${namespace}.${key}:`, json.errors);
+      throw new Error(json.errors.map((e: any) => e.message).join(", "));
+    }
+
+    const data = json.data as MetafieldsSetResponse;
+    if (data.metafieldsSet?.userErrors?.length > 0) {
+      throw new Error(data.metafieldsSet.userErrors.map((e) => e.message).join(", "));
+    }
+
+  } catch (error) {
+    console.error(`Error writing metafield ${namespace}.${key}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Generic: Delete a shop metafield
+ */
+export async function deleteShopMetafield(
+  admin: AdminClient,
+  namespace: string,
+  key: string
+): Promise<void> {
+  // To delete, we first need the ID. FETCH, then DELETE.
+  try {
+    const response = await admin.graphql(GET_SHOP_METAFIELD_QUERY, {
+      variables: { namespace, key },
+    });
+    const json = await response.json();
+    const data = json.data as ShopMetafieldResponse;
+    const metafieldId = data.shop?.metafield?.id;
+
+    if (!metafieldId) return; // Already gone
+
+    const deleteResponse = await admin.graphql(DELETE_SHOP_METAFIELD_MUTATION, {
+      variables: { id: metafieldId }
+    });
+    const deleteJson = await deleteResponse.json();
+
+    if (deleteJson.errors) {
+      console.error(`GraphQL errors when deleting metafield ${namespace}.${key}:`, deleteJson.errors);
+    }
+  } catch (error) {
+    console.error(`Error deleting metafield ${namespace}.${key}:`, error);
+  }
 }
 
 /**
@@ -111,19 +282,30 @@ async function getShopId(admin: AdminApiContext["admin"]): Promise<string> {
  * Returns the stored config or default if none exists
  */
 export async function getBarsConfig(
-  admin: AdminApiContext["admin"]
+  admin: AdminClient
 ): Promise<BarsConfig> {
   try {
     const response = await admin.graphql(GET_BARS_CONFIG_QUERY);
     const json = await response.json();
+
+    if (json.errors) {
+      console.error("GraphQL errors when fetching bars config:", json.errors);
+      return DEFAULT_BARS_CONFIG;
+    }
+
     const data = json.data as ShopMetafieldResponse;
 
-    if (data.shop.metafield?.value) {
-      const config = JSON.parse(data.shop.metafield.value) as BarsConfig;
-      return {
-        ...DEFAULT_BARS_CONFIG,
-        ...config,
-      };
+    if (data.shop?.metafield?.value) {
+      try {
+        const config = JSON.parse(data.shop.metafield.value) as BarsConfig;
+        return {
+          ...DEFAULT_BARS_CONFIG,
+          ...config,
+        };
+      } catch (parseError) {
+        console.error("Error parsing bars config JSON:", parseError);
+        return DEFAULT_BARS_CONFIG;
+      }
     }
 
     return DEFAULT_BARS_CONFIG;
@@ -137,7 +319,7 @@ export async function getBarsConfig(
  * Write bar configuration to metafields
  */
 export async function setBarsConfig(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   config: BarsConfig
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -158,9 +340,18 @@ export async function setBarsConfig(
     });
 
     const json = await response.json();
+
+    if (json.errors) {
+      console.error("GraphQL errors when setting bars config:", json.errors);
+      return {
+        success: false,
+        errors: json.errors.map((e: any) => e.message),
+      };
+    }
+
     const data = json.data as MetafieldsSetResponse;
 
-    if (data.metafieldsSet.userErrors.length > 0) {
+    if (data.metafieldsSet?.userErrors && data.metafieldsSet.userErrors.length > 0) {
       return {
         success: false,
         errors: data.metafieldsSet.userErrors.map((e) => e.message),
@@ -181,30 +372,30 @@ export async function setBarsConfig(
  * Get a single bar by ID
  */
 export async function getBarById(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barId: string
 ): Promise<Bar | null> {
   const config = await getBarsConfig(admin);
-  return config.bars.find((bar) => bar.id === barId) || null;
+  return config.bars.find((bar: Bar) => bar.id === barId) || null;
 }
 
 /**
  * Get all enabled bars
  */
 export async function getEnabledBars(
-  admin: AdminApiContext["admin"]
+  admin: AdminClient
 ): Promise<Bar[]> {
   const config = await getBarsConfig(admin);
   return config.bars
-    .filter((bar) => bar.enabled)
-    .sort((a, b) => b.priority - a.priority);
+    .filter((bar: Bar) => bar.enabled)
+    .sort((a: Bar, b: Bar) => b.priority - a.priority);
 }
 
 /**
  * Create a new bar
  */
 export async function createBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barData: Partial<Bar>
 ): Promise<{ success: boolean; bar?: Bar; errors?: string[] }> {
   try {
@@ -233,7 +424,7 @@ export async function createBar(
  * Update an existing bar
  */
 export async function updateBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barId: string,
   updates: Partial<Bar>
 ): Promise<{ success: boolean; bar?: Bar; errors?: string[] }> {
@@ -274,7 +465,7 @@ export async function updateBar(
  * Delete a bar by ID
  */
 export async function deleteBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barId: string
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -301,7 +492,7 @@ export async function deleteBar(
  * Toggle bar enabled status
  */
 export async function toggleBarEnabled(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barId: string
 ): Promise<{ success: boolean; enabled?: boolean; errors?: string[] }> {
   try {
@@ -335,7 +526,7 @@ export async function toggleBarEnabled(
  * Duplicate a bar
  */
 export async function duplicateBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barId: string
 ): Promise<{ success: boolean; bar?: Bar; errors?: string[] }> {
   try {
@@ -350,6 +541,7 @@ export async function duplicateBar(
       ...originalBar,
       name: originalBar.name + " (Copy)",
       enabled: false,
+      priority: 0,
     });
 
     config.bars.push(duplicatedBar);
@@ -374,7 +566,7 @@ export async function duplicateBar(
  * Reorder bars (update priorities)
  */
 export async function reorderBars(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   barIds: string[]
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -402,7 +594,7 @@ export async function reorderBars(
  * Update global settings
  */
 export async function updateGlobalSettings(
-  admin: AdminApiContext["admin"],
+  admin: AdminClient,
   settings: Partial<BarsConfig["global_settings"]>
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -427,7 +619,7 @@ export async function updateGlobalSettings(
  * Get global settings
  */
 export async function getGlobalSettings(
-  admin: AdminApiContext["admin"]
+  admin: AdminClient
 ): Promise<BarsConfig["global_settings"]> {
   const config = await getBarsConfig(admin);
   return config.global_settings;
