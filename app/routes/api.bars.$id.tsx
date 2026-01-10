@@ -16,6 +16,17 @@ import {
   toggleBarEnabled,
 } from "../lib/metafields.server";
 import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
+import {
+  validateBarText,
+  validateBarName,
+  validateUrl,
+  validatePriority,
+  validateScheduleDates,
+  validateHexColor,
+  validateBarPosition,
+  validateFontSize,
+  validateCookieDuration,
+} from "../lib/validation.server";
 
 // GET /api/bars/:id - Get single bar
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -109,15 +120,112 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     if (method === "PUT") {
       const body = await request.json();
 
-      // Validate required fields
-      if (!body.name || !body.content?.text) {
+      // Validate name
+      const nameCheck = validateBarName(body.name);
+      if (!nameCheck.valid) {
         return json(
-          { success: false, error: "Name and text are required" },
+          { success: false, error: nameCheck.error },
           { status: 400 }
         );
       }
 
-      // Validate countdown bars
+      // Validate text content
+      const textCheck = validateBarText(body.content?.text);
+      if (!textCheck.valid) {
+        return json(
+          { success: false, error: textCheck.error },
+          { status: 400 }
+        );
+      }
+
+      // Validate priority if provided
+      if (body.priority !== undefined) {
+        const priorityCheck = validatePriority(body.priority);
+        if (!priorityCheck.valid) {
+          return json(
+            { success: false, error: priorityCheck.error },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Validate CTA link if provided
+      if (body.content?.cta_link && !validateUrl(body.content.cta_link)) {
+        return json(
+          { success: false, error: "Invalid CTA link URL format" },
+          { status: 400 }
+        );
+      }
+
+      // Validate style if provided
+      if (body.style) {
+        if (body.style.position) {
+          const posCheck = validateBarPosition(body.style.position);
+          if (!posCheck.valid) {
+            return json(
+              { success: false, error: posCheck.error },
+              { status: 400 }
+            );
+          }
+        }
+
+        if (body.style.bg_color) {
+          const bgCheck = validateHexColor(body.style.bg_color);
+          if (!bgCheck.valid) {
+            return json(
+              { success: false, error: bgCheck.error },
+              { status: 400 }
+            );
+          }
+        }
+
+        if (body.style.text_color) {
+          const tcCheck = validateHexColor(body.style.text_color);
+          if (!tcCheck.valid) {
+            return json(
+              { success: false, error: tcCheck.error },
+              { status: 400 }
+            );
+          }
+        }
+
+        if (body.style.font_size) {
+          const fsCheck = validateFontSize(body.style.font_size);
+          if (!fsCheck.valid) {
+            return json(
+              { success: false, error: fsCheck.error },
+              { status: 400 }
+            );
+          }
+        }
+      }
+
+      // Validate settings if provided
+      if (body.settings?.cookie_duration !== undefined) {
+        const cookieCheck = validateCookieDuration(body.settings.cookie_duration);
+        if (!cookieCheck.valid) {
+          return json(
+            { success: false, error: cookieCheck.error },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Validate schedule if provided
+      if (body.schedule) {
+        const scheduleCheck = validateScheduleDates(
+          body.schedule.start_date,
+          body.schedule.end_date
+        );
+        if (!scheduleCheck.valid) {
+          return json(
+            { success: false, error: scheduleCheck.error },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Validate countdown bars specifically
       if (body.type === "countdown") {
         if (!body.content?.end_datetime) {
           return json(

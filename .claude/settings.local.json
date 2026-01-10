@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsx:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd //c \"taskkill /PID 15852 /F\")",
+      "Bash(npx prisma generate:*)",
+      "Bash(cmd //c \"taskkill /F /IM node.exe\")"
+    ]
+  }
+}
