@@ -397,12 +397,10 @@
 {% schema %}
 {
   "name": "Announcement Bar",
-  "target": "section",
+  "target": "body",
   "settings": [
     { "type": "paragraph", "content": "Configure bars in the AnnounceFlow app. Settings below are fallback." },
-    { "type": "header", "content": "Bar Type" },
     { "type": "select", "id": "bar_type", "label": "Type", "options": [{ "value": "promotional", "label": "Promotional" }, { "value": "announcement", "label": "Announcement" }, { "value": "countdown", "label": "Countdown Timer" }], "default": "promotional" },
-    { "type": "header", "content": "Content" },
     { "type": "textarea", "id": "message", "label": "Message", "default": "Free shipping on orders over $50!" },
     { "type": "header", "content": "Countdown Settings" },
     { "type": "text", "id": "end_datetime", "label": "End Date/Time", "info": "Format: YYYY-MM-DDTHH:MM:SS (e.g., 2025-12-31T23:59:59)", "placeholder": "2025-12-31T23:59:59" },
@@ -422,7 +420,6 @@
     { "type": "select", "id": "position", "label": "Position", "options": [{ "value": "top", "label": "Top" }, { "value": "bottom", "label": "Bottom" }], "default": "top" },
     { "type": "checkbox", "id": "sticky", "label": "Sticky", "default": false },
     { "type": "checkbox", "id": "dismissible", "label": "Show close button", "default": true }
-  ],
-  "presets": [{ "name": "Announcement Bar", "category": "Promotional" }]
+  ]
 }
 {% endschema %}

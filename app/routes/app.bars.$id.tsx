@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useActionData, useLoaderData, useNavigate, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigate, useSubmit, useNavigation, useBlocker } from "@remix-run/react";
 import {
   Page, Layout, Card, BlockStack, Text, TextField, Select, Button,
   InlineStack, Box, Divider, Checkbox, Banner, FormLayout, Modal, InlineError,
@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { authenticate } from "../shopify.server";
 import { getBarById, updateBar, deleteBar } from "../lib/metafields.server";
 import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
+import { ColorPicker, FontSizeSelector, BarPreview } from "../components";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -109,63 +110,51 @@ export default function EditBar() {
   const [expiredText, setExpiredText] = useState(bar.content.expired_text || "This offer has ended");
   const [hideWhenExpired, setHideWhenExpired] = useState(bar.settings.hide_when_expired || false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const navigation = useNavigation();
+  const isSaving = navigation.state === "submitting";
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [countdownValues, setCountdownValues] = useState({ days: "00", hours: "00", minutes: "00", seconds: "00" });
+  const [isDirty, setIsDirty] = useState(false);
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  useEffect(() => {
+    const isChanged =
+      name !== bar.name ||
+      type !== bar.type ||
+      text !== bar.content.text ||
+      ctaText !== (bar.content.cta_text || "") ||
+      ctaLink !== (bar.content.cta_link || "") ||
+      ctaStyle !== (bar.content.cta_style || "primary") ||
+      position !== bar.style.position ||
+      bgColor !== bar.style.bg_color ||
+      textColor !== bar.style.text_color ||
+      fontSize !== bar.style.font_size ||
+      enabled !== bar.enabled ||
+      dismissible !== bar.settings.dismissible ||
+      endDatetime !== (bar.content.end_datetime || "") ||
+      expiredText !== (bar.content.expired_text || "This offer has ended") ||
+      hideWhenExpired !== (bar.settings.hide_when_expired || false);
+    setIsDirty(isChanged);
+  }, [name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired, bar]);
+
 
   useEffect(() => {
     if (actionData && !actionData.success) {
       shopify.toast.show(actionData.error || "Failed", { isError: true });
-      setIsSaving(false);
+
     }
   }, [actionData, shopify]);
 
-  // Live countdown preview
-  useEffect(() => {
-    if (type !== "countdown" || !endDatetime) {
-      setCountdownValues({ days: "12", hours: "08", minutes: "45", seconds: "30" });
-      return;
-    }
 
-    const endDate = new Date(endDatetime);
-    if (isNaN(endDate.getTime())) {
-      setCountdownValues({ days: "00", hours: "00", minutes: "00", seconds: "00" });
-      return;
-    }
-
-    const updateCountdown = () => {
-      const now = Date.now();
-      const diff = endDate.getTime() - now;
-
-      if (diff <= 0) {
-        setCountdownValues({ days: "00", hours: "00", minutes: "00", seconds: "00" });
-        return;
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setCountdownValues({
-        days: days.toString().padStart(2, "0"),
-        hours: hours.toString().padStart(2, "0"),
-        minutes: minutes.toString().padStart(2, "0"),
-        seconds: seconds.toString().padStart(2, "0"),
-      });
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [type, endDatetime]);
 
   const barTypeOptions = [
     { label: "Promotional", value: "promotional" },
     { label: "Announcement", value: "announcement" },
     { label: "Countdown Timer", value: "countdown" },
   ];
-  const fontSizeOptions = [{ label: "Small", value: "small" }, { label: "Medium", value: "medium" }, { label: "Large", value: "large" }];
   const ctaStyleOptions = [{ label: "Primary", value: "primary" }, { label: "Secondary", value: "secondary" }, { label: "Link", value: "link" }];
 
   // Get minimum datetime (now + 1 minute)
@@ -205,7 +194,8 @@ export default function EditBar() {
 
   const handleSave = useCallback(() => {
     if (!validateForm()) { shopify.toast.show("Please fix the errors", { isError: true }); return; }
-    setIsSaving(true);
+
+    setIsDirty(false);
     const formData = new FormData();
     formData.append("intent", "save");
     formData.append("name", name);
@@ -246,7 +236,7 @@ export default function EditBar() {
     }
   }, [text]);
 
-  const fontPx = fontSize === "small" ? "12px" : fontSize === "large" ? "18px" : "14px";
+
 
   const formattedEndDate = useMemo(() => {
     if (!endDatetime) return null;
@@ -421,41 +411,23 @@ export default function EditBar() {
                         <Button pressed={position === "bottom"} onClick={() => setPosition("bottom")}>Bottom</Button>
                       </InlineStack>
                     </InlineStack>
+
                     <FormLayout.Group>
-                      <Box>
-                        <Text as="span" variant="bodyMd">Background Color</Text>
-                        <Box paddingBlockStart="200">
-                          <InlineStack gap="200" blockAlign="center">
-                            <input
-                              type="color"
-                              value={bgColor}
-                              onChange={(e) => setBgColor(e.target.value)}
-                              style={{ width: 40, height: 40, border: "1px solid #ccc", borderRadius: 4, cursor: "pointer" }}
-                            />
-                            <TextField label="BG" labelHidden value={bgColor} onChange={setBgColor} autoComplete="off" />
-                          </InlineStack>
-                        </Box>
-                      </Box>
-                      <Box>
-                        <Text as="span" variant="bodyMd">Text Color</Text>
-                        <Box paddingBlockStart="200">
-                          <InlineStack gap="200" blockAlign="center">
-                            <input
-                              type="color"
-                              value={textColor}
-                              onChange={(e) => setTextColor(e.target.value)}
-                              style={{ width: 40, height: 40, border: "1px solid #ccc", borderRadius: 4, cursor: "pointer" }}
-                            />
-                            <TextField label="Text" labelHidden value={textColor} onChange={setTextColor} autoComplete="off" />
-                          </InlineStack>
-                        </Box>
-                      </Box>
+                      <ColorPicker
+                        label="Background Color"
+                        value={bgColor}
+                        onChange={setBgColor}
+                      />
+                      <ColorPicker
+                        label="Text Color"
+                        value={textColor}
+                        onChange={setTextColor}
+                      />
                     </FormLayout.Group>
-                    <Select
-                      label="Font Size"
-                      options={fontSizeOptions}
+
+                    <FontSizeSelector
                       value={fontSize}
-                      onChange={(v) => setFontSize(v as FontSize)}
+                      onChange={setFontSize}
                     />
                   </FormLayout>
                 </BlockStack>
@@ -487,103 +459,26 @@ export default function EditBar() {
           {/* Preview Sidebar */}
           <Layout.Section variant="oneThird">
             <Box position="sticky" insetBlockStart="400">
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">Live Preview</Text>
-                  <Box padding="300" background="bg-surface-secondary" borderRadius="200">
-                    <Box padding="300" borderRadius="100" background="bg-fill-info">
-                      <div
-                        style={{
-                          backgroundColor: bgColor,
-                          color: textColor,
-                          padding: "12px 16px",
-                          borderRadius: "4px",
-                          fontSize: fontPx,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "12px",
-                          flexWrap: "wrap",
-                          position: "relative",
-                        }}
-                      >
-                        {/* Show expired message if countdown expired */}
-                        {type === "countdown" && isCountdownExpired && !hideWhenExpired ? (
-                          <span style={{ fontWeight: 600, textAlign: "center" }}>{expiredText}</span>
-                        ) : (
-                          <>
-                            <span style={{ fontWeight: 500, textAlign: "center" }}>{text || "Your message here"}</span>
-
-                            {/* Countdown Preview */}
-                            {type === "countdown" && !isCountdownExpired && (
-                              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontVariantNumeric: "tabular-nums" }}>
-                                {[
-                                  { value: countdownValues.days, label: "D" },
-                                  { value: countdownValues.hours, label: "H" },
-                                  { value: countdownValues.minutes, label: "M" },
-                                  { value: countdownValues.seconds, label: "S" },
-                                ].map((unit, i) => (
-                                  <div key={i} style={{ display: "flex", alignItems: "center" }}>
-                                    <span
-                                      style={{
-                                        backgroundColor: "rgba(0,0,0,0.2)",
-                                        padding: "4px 8px",
-                                        borderRadius: "4px",
-                                        fontWeight: 700,
-                                        minWidth: "32px",
-                                        textAlign: "center",
-                                        fontSize: "calc(" + fontPx + " + 2px)",
-                                      }}
-                                    >
-                                      {unit.value}
-                                    </span>
-                                    {i < 3 && (
-                                      <span style={{ marginLeft: "4px", marginRight: "4px", fontWeight: 700, opacity: 0.7 }}>:</span>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* CTA Preview */}
-                            {type !== "countdown" && ctaText && (
-                              <span
-                                style={{
-                                  backgroundColor: ctaStyle === "primary" ? textColor : "transparent",
-                                  color: ctaStyle === "primary" ? bgColor : textColor,
-                                  padding: ctaStyle === "link" ? 0 : "6px 12px",
-                                  borderRadius: 4,
-                                  border: ctaStyle === "secondary" ? "1px solid currentColor" : "none",
-                                  textDecoration: ctaStyle === "link" ? "underline" : "none",
-                                  fontWeight: 600,
-                                  fontSize: 13,
-                                }}
-                              >
-                                {ctaText}
-                              </span>
-                            )}
-                          </>
-                        )}
-
-                        {/* Dismiss Preview */}
-                        {dismissible && (
-                          <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", opacity: 0.7, cursor: "pointer" }}>
-                            ✕
-                          </span>
-                        )}
-                      </div>
-                    </Box>
-                  </Box>
-                  <BlockStack gap="100">
-                    <Text as="p" variant="bodySm" tone="subdued">Position: {position === "top" ? "Top of page" : "Bottom of page"}</Text>
-                    {type === "countdown" && endDatetime && !isCountdownExpired && (
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Ends: {formattedEndDate}
-                      </Text>
-                    )}
-                  </BlockStack>
-                </BlockStack>
-              </Card>
+              <BarPreview
+                type={type}
+                content={{
+                  text: text,
+                  ctaText: ctaText,
+                  ctaLink: ctaLink,
+                  endDatetime: endDatetime,
+                  expiredText: expiredText,
+                }}
+                style={{
+                  position: position,
+                  bgColor: bgColor,
+                  textColor: textColor,
+                  fontSize: fontSize,
+                }}
+                settings={{
+                  dismissible: dismissible,
+                  hideWhenExpired: hideWhenExpired,
+                }}
+              />
 
               {/* Status Card */}
               <Box paddingBlockStart="400">
@@ -661,6 +556,26 @@ export default function EditBar() {
           <Text as="p">Are you sure you want to delete "{bar.name}"? This action cannot be undone.</Text>
         </Modal.Section>
       </Modal>
+      {blocker.state === "blocked" && (
+        <Modal
+          open
+          title="Unsaved changes"
+          primaryAction={{
+            content: "Discard changes",
+            onAction: () => blocker.proceed(),
+            destructive: true,
+          }}
+          secondaryActions={[{
+            content: "Keep editing",
+            onAction: () => blocker.reset(),
+          }]}
+          onClose={() => blocker.reset()}
+        >
+          <Modal.Section>
+            <p>You have unsaved changes. Leaving this page will discard them.</p>
+          </Modal.Section>
+        </Modal>
+      )}
     </Page>
   );
 }

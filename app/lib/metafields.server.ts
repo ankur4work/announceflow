@@ -99,7 +99,7 @@ interface ShopIdResponse {
 /**
  * Get the shop's GID for metafield operations
  */
-async function getShopId(admin: AdminApiContext["admin"]): Promise<string> {
+async function getShopId(admin: AdminApiContext): Promise<string> {
   const response = await admin.graphql(GET_SHOP_ID_QUERY);
   const json = await response.json();
   const data = json.data as ShopIdResponse;
@@ -111,7 +111,7 @@ async function getShopId(admin: AdminApiContext["admin"]): Promise<string> {
  * Returns the stored config or default if none exists
  */
 export async function getBarsConfig(
-  admin: AdminApiContext["admin"]
+  admin: AdminApiContext
 ): Promise<BarsConfig> {
   try {
     const response = await admin.graphql(GET_BARS_CONFIG_QUERY);
@@ -137,7 +137,7 @@ export async function getBarsConfig(
  * Write bar configuration to metafields
  */
 export async function setBarsConfig(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   config: BarsConfig
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -181,7 +181,7 @@ export async function setBarsConfig(
  * Get a single bar by ID
  */
 export async function getBarById(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barId: string
 ): Promise<Bar | null> {
   const config = await getBarsConfig(admin);
@@ -192,7 +192,7 @@ export async function getBarById(
  * Get all enabled bars
  */
 export async function getEnabledBars(
-  admin: AdminApiContext["admin"]
+  admin: AdminApiContext
 ): Promise<Bar[]> {
   const config = await getBarsConfig(admin);
   return config.bars
@@ -204,7 +204,7 @@ export async function getEnabledBars(
  * Create a new bar
  */
 export async function createBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barData: Partial<Bar>
 ): Promise<{ success: boolean; bar?: Bar; errors?: string[] }> {
   try {
@@ -233,7 +233,7 @@ export async function createBar(
  * Update an existing bar
  */
 export async function updateBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barId: string,
   updates: Partial<Bar>
 ): Promise<{ success: boolean; bar?: Bar; errors?: string[] }> {
@@ -274,7 +274,7 @@ export async function updateBar(
  * Delete a bar by ID
  */
 export async function deleteBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barId: string
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -301,7 +301,7 @@ export async function deleteBar(
  * Toggle bar enabled status
  */
 export async function toggleBarEnabled(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barId: string
 ): Promise<{ success: boolean; enabled?: boolean; errors?: string[] }> {
   try {
@@ -335,7 +335,7 @@ export async function toggleBarEnabled(
  * Duplicate a bar
  */
 export async function duplicateBar(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barId: string
 ): Promise<{ success: boolean; bar?: Bar; errors?: string[] }> {
   try {
@@ -374,7 +374,7 @@ export async function duplicateBar(
  * Reorder bars (update priorities)
  */
 export async function reorderBars(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   barIds: string[]
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -402,7 +402,7 @@ export async function reorderBars(
  * Update global settings
  */
 export async function updateGlobalSettings(
-  admin: AdminApiContext["admin"],
+  admin: AdminApiContext,
   settings: Partial<BarsConfig["global_settings"]>
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
@@ -427,7 +427,7 @@ export async function updateGlobalSettings(
  * Get global settings
  */
 export async function getGlobalSettings(
-  admin: AdminApiContext["admin"]
+  admin: AdminApiContext
 ): Promise<BarsConfig["global_settings"]> {
   const config = await getBarsConfig(admin);
   return config.global_settings;

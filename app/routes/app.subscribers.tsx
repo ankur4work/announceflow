@@ -151,7 +151,7 @@ export default function Subscribers() {
                     <Text as="h2" variant="headingMd">
                       All Subscribers
                     </Text>
-                    <Badge tone="info">{subscribers.length} total</Badge>
+                    <Badge tone="info">{`${subscribers.length} total`}</Badge>
                   </InlineStack>
                   <DataTable
                     columnContentTypes={["text", "text", "text"]}
