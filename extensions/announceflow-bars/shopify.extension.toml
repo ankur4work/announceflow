@@ -1,5 +1,6 @@
 api_version = "2024-10"
 name = "AnnounceFlow Bars"
+uid = "c6a7653b-4797-8293-0750-b636d75ebe0ba235f615"
 type = "theme_app_extension"
 
 [settings]
