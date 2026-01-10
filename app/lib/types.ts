@@ -9,7 +9,8 @@ export type BarType =
   | "promotional"
   | "countdown"
   | "email_signup"
-  | "free_shipping";
+  | "free_shipping"
+  | "cookie_consent";
 
 // Position Options
 export type BarPosition = "top" | "bottom";

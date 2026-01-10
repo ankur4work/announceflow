@@ -11,7 +11,21 @@
       "Bash(npx prisma generate:*)",
       "Bash(cmd //c \"taskkill /F /IM node.exe\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(git log:*)",
+      "Bash(set PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=yes)",
+      "Bash($env:PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"yes\")",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=yes npx prisma migrate reset:*)",
+      "Bash(curl:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(node scripts/list-shops.js:*)",
+      "Bash(cat:*)",
+      "Bash(cd:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)"
     ]
   }
 }

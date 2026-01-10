@@ -397,9 +397,10 @@
 {% schema %}
 {
   "name": "Announcement Bar",
-  "target": "section",
+  "target": "body",
   "settings": [
-    { "type": "paragraph", "content": "Full configuration available in AnnounceFlow App." },
+    { "type": "paragraph", "content": "Configure bars in the AnnounceFlow app. Settings below are fallback." },
+    { "type": "select", "id": "bar_type", "label": "Type", "options": [{ "value": "promotional", "label": "Promotional" }, { "value": "announcement", "label": "Announcement" }, { "value": "countdown", "label": "Countdown Timer" }], "default": "promotional" },
     { "type": "textarea", "id": "message", "label": "Message", "default": "Free shipping on orders over $50!" },
     { "type": "color", "id": "background_color", "label": "Background color", "default": "#1a1a2e" },
     { "type": "color", "id": "text_color", "label": "Text color", "default": "#ffffff" },
