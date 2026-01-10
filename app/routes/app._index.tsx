@@ -80,9 +80,10 @@ export default function Dashboard() {
   }, [searchParams, shopify]);
 
   // Calculate stats
-  const activeBars = bars.filter((bar: Bar) => bar.enabled).length;
-  const totalViews = bars.reduce((sum: number, bar: Bar) => sum + (bar.analytics?.views || 0), 0);
-  const totalClicks = bars.reduce((sum: number, bar: Bar) => sum + (bar.analytics?.clicks || 0), 0);
+  const validBars = bars.filter((bar): bar is NonNullable<typeof bar> => bar !== null);
+  const activeBars = validBars.filter((bar) => bar.enabled).length;
+  const totalViews = validBars.reduce((sum, bar) => sum + (bar.analytics?.views || 0), 0);
+  const totalClicks = validBars.reduce((sum, bar) => sum + (bar.analytics?.clicks || 0), 0);
   const clickRate = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0";
 
   // Handle toggle bar enabled
@@ -199,7 +200,7 @@ export default function Dashboard() {
     plural: "bars",
   };
 
-  const rowMarkup = bars.map((bar: Bar, index: number) => (
+  const rowMarkup = validBars.map((bar, index) => (
     <IndexTable.Row id={bar.id} key={bar.id} position={index}>
       <IndexTable.Cell>
         <InlineStack gap="300" blockAlign="center">
