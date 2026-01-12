@@ -28,6 +28,7 @@ import { authenticate } from "../shopify.server";
 import { createBar } from "../lib/metafields.server";
 import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
 import { ColorPicker, FontSizeSelector, BarPreview } from "../components";
+import { getContrastWarning, hasGoodContrast } from "../lib/ui-utils";
 
 // Form data type
 interface FormData {
@@ -385,7 +386,7 @@ export default function CreateBar() {
                       autoComplete="off"
                       error={errors.text}
                       requiredIndicator
-                      helpText="This is the main message visitors will see"
+                      helpText="This is the main message visitors will see. Keep it concise and clear (recommended: 50-100 characters)."
                     />
 
                     {formData.type !== "countdown" && (
@@ -396,7 +397,9 @@ export default function CreateBar() {
                           onChange={(value) => updateContent("ctaText", value)}
                           placeholder="Shop Now"
                           autoComplete="off"
-                          helpText="Optional call-to-action button"
+                          maxLength={30}
+                          showCharacterCount
+                          helpText="Optional call-to-action button. Keep it short and action-oriented (e.g., 'Shop Now', 'Learn More')."
                         />
                         <TextField
                           label="Button Link"
@@ -438,9 +441,29 @@ export default function CreateBar() {
               {/* Style Section */}
               <Card>
                 <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">
-                    Style
-                  </Text>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h2" variant="headingMd">
+                      Style
+                    </Text>
+                    <Button
+                      size="slim"
+                      variant="plain"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          style: {
+                            position: "top",
+                            bgColor: "#000000",
+                            textColor: "#FFFFFF",
+                            fontSize: "medium",
+                          },
+                        }));
+                        setIsDirty(true);
+                      }}
+                    >
+                      Reset to defaults
+                    </Button>
+                  </InlineStack>
                   <FormLayout>
                     {/* Position */}
                     <BlockStack gap="200">
@@ -479,8 +502,23 @@ export default function CreateBar() {
                         value={formData.style.textColor}
                         onChange={(color) => updateField("style", "textColor", color)}
                         helpText="Should contrast with background"
+                        error={
+                          !hasGoodContrast(formData.style.bgColor, formData.style.textColor)
+                            ? getContrastWarning(formData.style.bgColor, formData.style.textColor) ||
+                              undefined
+                            : undefined
+                        }
                       />
                     </InlineGrid>
+                    {!hasGoodContrast(formData.style.bgColor, formData.style.textColor) && (
+                      <Box padding="200" background="bg-surface-warning-subdued" borderRadius="200">
+                        <Text as="span" variant="bodySm" tone="warning">
+                          ⚠️ {getContrastWarning(formData.style.bgColor, formData.style.textColor)}
+                          {" "}
+                          Consider adjusting colors for better readability.
+                        </Text>
+                      </Box>
+                    )}
 
                     {/* Font Size */}
                     <FontSizeSelector

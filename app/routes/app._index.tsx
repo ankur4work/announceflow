@@ -63,7 +63,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       error: null,
     });
   } catch (error) {
-    console.error("Error loading bars:", error);
     return json({
       bars: [],
       globalSettings: {},
@@ -148,6 +147,26 @@ const formatRelativeDate = (dateString: string): string => {
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) !== 1 ? "s" : ""} ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+// Helper: Get bar type icon
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case "countdown":
+      return ClockIcon;
+    case "promotional":
+      return MegaphoneIcon;
+    case "announcement":
+      return MegaphoneIcon;
+    case "email_signup":
+      return EmailIcon;
+    case "free_shipping":
+      return DeliveryIcon;
+    case "cookie_consent":
+      return LockIcon;
+    default:
+      return QuestionCircleIcon;
+  }
 };
 
 // Helper: Get bar type badge
@@ -356,16 +375,24 @@ export default function Dashboard() {
         {/* Type Column */}
         <IndexTable.Cell>
           <InlineStack gap="200" blockAlign="center">
+            <Icon source={getTypeIcon(bar.type)} tone="base" />
             {getTypeBadge(bar.type)}
             {expired && <Badge tone="warning">Expired</Badge>}
           </InlineStack>
         </IndexTable.Cell>
 
-        {/* Created Column */}
+        {/* Created/Last Edited Column */}
         <IndexTable.Cell>
-          <Text as="span" variant="bodySm" tone="subdued">
-            {formatRelativeDate(bar.created_at || bar.updated_at)}
-          </Text>
+          <BlockStack gap="050">
+            <Text as="span" variant="bodySm" tone="subdued">
+              Created: {formatRelativeDate(bar.created_at)}
+            </Text>
+            {bar.updated_at && bar.updated_at !== bar.created_at && (
+              <Text as="span" variant="bodySm" tone="subdued">
+                Edited: {formatRelativeDate(bar.updated_at)}
+              </Text>
+            )}
+          </BlockStack>
         </IndexTable.Cell>
 
         {/* Actions Column */}
@@ -587,7 +614,7 @@ export default function Dashboard() {
                     { title: "Status", alignment: "center" },
                     { title: "Name" },
                     { title: "Type" },
-                    { title: "Created" },
+                    { title: "Last edited" },
                     { title: "Actions" },
                   ]}
                   selectable={false}

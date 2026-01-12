@@ -45,7 +45,6 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ session }) => {
       shopify.registerWebhooks({ session });
-      console.log("Creating or updating shop record for:", session.shop);
       // Import here dynamically to avoid circular dependencies if any, 
       // or just trust the imports at top are fine. 
       // But wait, createShop is not imported. I need to add import or use dynamic import.

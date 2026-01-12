@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Card, BlockStack, InlineStack, Text, Box, Button, ButtonGroup } from "@shopify/polaris";
 import { DesktopIcon, MobileIcon } from "@shopify/polaris-icons";
 import type { BarType } from "../lib/types";
@@ -24,6 +24,8 @@ interface BarPreviewProps {
         hideWhenExpired?: boolean;
     };
     isPremium?: boolean;
+    shippingThreshold?: number;
+    currentCartValue?: number;
 }
 
 // Get font size in pixels
@@ -38,7 +40,37 @@ const getFontSizePx = (size: string): number => {
     }
 };
 
-// Countdown timer component
+// Calculate color contrast ratio (WCAG)
+function getContrastRatio(color1: string, color2: string): number {
+    const getLuminance = (hex: string): number => {
+        const rgb = hexToRgb(hex);
+        if (!rgb) return 0;
+        const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
+            val = val / 255;
+            return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+
+    const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+            ? {
+                  r: parseInt(result[1], 16),
+                  g: parseInt(result[2], 16),
+                  b: parseInt(result[3], 16),
+              }
+            : null;
+    };
+
+    const lum1 = getLuminance(color1);
+    const lum2 = getLuminance(color2);
+    const lighter = Math.max(lum1, lum2);
+    const darker = Math.min(lum1, lum2);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Countdown timer component with proper formatting
 function CountdownDisplay({
     endDatetime,
     textColor,
@@ -53,7 +85,7 @@ function CountdownDisplay({
 
     useEffect(() => {
         if (!endDatetime) {
-            // Show demo countdown if no end date
+            // Show demo countdown if no end date (02d 14h 35m 42s)
             setTimeLeft({ days: 2, hours: 14, minutes: 35, seconds: 42 });
             return;
         }
@@ -92,62 +124,105 @@ function CountdownDisplay({
         return null;
     }
 
-    const units = [
-        { value: timeLeft.days, label: "days" },
-        { value: timeLeft.hours, label: "hrs" },
-        { value: timeLeft.minutes, label: "min" },
-        { value: timeLeft.seconds, label: "sec" },
-    ];
+    // Format: "02d 14h 35m 42s"
+    const formatTime = (value: number, unit: string) => {
+        return `${String(value).padStart(2, "0")}${unit}`;
+    };
 
     return (
         <div
             style={{
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "4px",
                 fontVariantNumeric: "tabular-nums",
+                fontWeight: 600,
+                fontSize: `${fontSize}px`,
             }}
         >
-            {units.map((unit, i) => (
-                <div key={unit.label} style={{ display: "flex", alignItems: "center" }}>
-                    <div style={{ textAlign: "center" }}>
-                        <div
-                            style={{
-                                backgroundColor: "rgba(0,0,0,0.2)",
-                                padding: "4px 8px",
-                                borderRadius: "4px",
-                                fontWeight: 700,
-                                fontSize: `${fontSize + 2}px`,
-                                minWidth: "36px",
-                            }}
-                        >
-                            {String(unit.value).padStart(2, "0")}
-                        </div>
-                        <div
-                            style={{
-                                fontSize: "10px",
-                                opacity: 0.8,
-                                marginTop: "2px",
-                            }}
-                        >
-                            {unit.label}
-                        </div>
-                    </div>
-                    {i < units.length - 1 && (
-                        <span
-                            style={{
-                                margin: "0 4px",
-                                fontWeight: 700,
-                                opacity: 0.7,
-                                alignSelf: "flex-start",
-                                paddingTop: "6px",
-                            }}
-                        >
-                            :
-                        </span>
-                    )}
-                </div>
-            ))}
+            {formatTime(timeLeft.days, "d")} {formatTime(timeLeft.hours, "h")}{" "}
+            {formatTime(timeLeft.minutes, "m")} {formatTime(timeLeft.seconds, "s")}
+        </div>
+    );
+}
+
+// Free Shipping Progress Bar Component
+function FreeShippingProgress({
+    threshold = 50,
+    currentValue = 0,
+    textColor,
+    bgColor,
+}: {
+    threshold?: number;
+    currentValue?: number;
+    textColor: string;
+    bgColor: string;
+}) {
+    const [animatedProgress, setAnimatedProgress] = useState(0);
+
+    useEffect(() => {
+        // Animate progress bar
+        const progress = Math.min((currentValue / threshold) * 100, 100);
+        const duration = 800; // Animation duration in ms
+        const steps = 30;
+        const stepDuration = duration / steps;
+        const stepValue = progress / steps;
+
+        let currentStep = 0;
+        const interval = setInterval(() => {
+            currentStep++;
+            setAnimatedProgress(Math.min(stepValue * currentStep, progress));
+            if (currentStep >= steps) {
+                clearInterval(interval);
+            }
+        }, stepDuration);
+
+        return () => clearInterval(interval);
+    }, [currentValue, threshold]);
+
+    const remaining = Math.max(0, threshold - currentValue);
+    const progressPercent = Math.min((currentValue / threshold) * 100, 100);
+
+    return (
+        <div style={{ width: "100%", marginTop: "8px" }}>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "6px",
+                    fontSize: "13px",
+                }}
+            >
+                <span style={{ fontWeight: 500 }}>
+                    {currentValue >= threshold
+                        ? "You've unlocked free shipping!"
+                        : `Add $${remaining.toFixed(2)} for free shipping`}
+                </span>
+                <span style={{ fontWeight: 600, opacity: 0.9 }}>
+                    ${currentValue.toFixed(2)} / ${threshold}
+                </span>
+            </div>
+            <div
+                style={{
+                    width: "100%",
+                    height: "6px",
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    borderRadius: "3px",
+                    overflow: "hidden",
+                    position: "relative",
+                }}
+            >
+                <div
+                    style={{
+                        width: `${animatedProgress}%`,
+                        height: "100%",
+                        backgroundColor: textColor,
+                        borderRadius: "3px",
+                        transition: "width 0.1s ease-out",
+                    }}
+                />
+            </div>
         </div>
     );
 }
@@ -155,7 +230,7 @@ function CountdownDisplay({
 // Main preview component
 /**
  * BarPreview component renders a live preview of the announcement bar.
- * Supports both desktop and mobile views.
+ * Supports all 5 bar types with animations and smooth transitions.
  *
  * @param props - Component props including type, content, style, and settings.
  * @returns React Element rendering the preview.
@@ -166,12 +241,30 @@ export function BarPreview({
     style,
     settings,
     isPremium = false,
+    shippingThreshold = 50,
+    currentCartValue = 0,
 }: BarPreviewProps) {
     const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+    const [darkMode, setDarkMode] = useState(false);
+    const [prevStyle, setPrevStyle] = useState(style);
 
     const fontSize = getFontSizePx(style.fontSize);
     const isMobile = device === "mobile";
     const containerWidth = isMobile ? "375px" : "100%";
+
+    // Check color contrast
+    const contrastRatio = useMemo(
+        () => getContrastRatio(style.bgColor, style.textColor),
+        [style.bgColor, style.textColor]
+    );
+    const hasPoorContrast = contrastRatio < 4.5;
+
+    // Animate color transitions
+    useEffect(() => {
+        if (prevStyle.bgColor !== style.bgColor || prevStyle.textColor !== style.textColor) {
+            setPrevStyle(style);
+        }
+    }, [style, prevStyle]);
 
     // Check if countdown is expired
     const isCountdownExpired = useCallback(() => {
@@ -192,7 +285,7 @@ export function BarPreview({
             gap: isMobile ? "8px" : "16px",
             flexWrap: "wrap",
             position: "relative",
-            transition: "all 0.2s ease",
+            transition: "background-color 0.3s ease, color 0.3s ease",
             minHeight: "44px",
         };
 
@@ -211,6 +304,31 @@ export function BarPreview({
         }
 
         switch (type) {
+            case "promotional":
+                return (
+                    <div style={baseStyle}>
+                        <span style={{ fontWeight: 500 }}>
+                            {content.text || "Welcome to our store!"}
+                        </span>
+                        {content.ctaText && <CTAButton content={content} style={style} />}
+                        {settings.dismissible && (
+                            <CloseButton textColor={style.textColor} />
+                        )}
+                        {!isPremium && (
+                            <span
+                                style={{
+                                    position: "absolute",
+                                    right: isMobile ? "30px" : "40px",
+                                    fontSize: "9px",
+                                    opacity: 0.6,
+                                }}
+                            >
+                                Powered by AnnounceFlow
+                            </span>
+                        )}
+                    </div>
+                );
+
             case "countdown":
                 return (
                     <div style={baseStyle}>
@@ -223,21 +341,36 @@ export function BarPreview({
                             fontSize={fontSize}
                         />
                         {settings.dismissible && (
-                            <span style={dismissButtonStyle}>✕</span>
+                            <CloseButton textColor={style.textColor} />
                         )}
                     </div>
                 );
 
             case "free_shipping":
                 return (
-                    <div style={baseStyle}>
-                        <span style={{ fontWeight: 500 }}>
-                            {content.text || "🚚 Free shipping on orders over $50!"}
-                        </span>
-                        {content.ctaText && <CTAButton content={content} style={style} />}
-                        {settings.dismissible && (
-                            <span style={dismissButtonStyle}>✕</span>
-                        )}
+                    <div style={{ ...baseStyle, flexDirection: "column", alignItems: "stretch" }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "12px",
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <span style={{ fontWeight: 500 }}>
+                                {content.text || "🚚 Free shipping on orders over $50!"}
+                            </span>
+                            {settings.dismissible && (
+                                <CloseButton textColor={style.textColor} />
+                            )}
+                        </div>
+                        <FreeShippingProgress
+                            threshold={shippingThreshold}
+                            currentValue={currentCartValue}
+                            textColor={style.textColor}
+                            bgColor={style.bgColor}
+                        />
                     </div>
                 );
 
@@ -251,18 +384,21 @@ export function BarPreview({
                             type="email"
                             placeholder="Enter email"
                             disabled
+                            aria-label="Email input (preview only)"
                             style={{
                                 padding: "6px 12px",
                                 borderRadius: "4px",
-                                border: "none",
+                                border: `1px solid rgba(255,255,255,0.3)`,
                                 fontSize: "13px",
                                 backgroundColor: "rgba(255,255,255,0.9)",
                                 color: "#333",
                                 width: isMobile ? "140px" : "180px",
+                                outline: "none",
                             }}
                         />
                         <button
                             disabled
+                            aria-label="Subscribe button (preview only)"
                             style={{
                                 padding: "6px 12px",
                                 borderRadius: "4px",
@@ -277,7 +413,7 @@ export function BarPreview({
                             Subscribe
                         </button>
                         {settings.dismissible && (
-                            <span style={dismissButtonStyle}>✕</span>
+                            <CloseButton textColor={style.textColor} />
                         )}
                     </div>
                 );
@@ -286,10 +422,25 @@ export function BarPreview({
                 return (
                     <div style={baseStyle}>
                         <span style={{ fontWeight: 500 }}>
-                            {content.text || "🍪 We use cookies to improve your experience."}
+                            {content.text ||
+                                "🍪 We use cookies to improve your experience."}
                         </span>
+                        <a
+                            href="#"
+                            onClick={(e) => e.preventDefault()}
+                            style={{
+                                color: style.textColor,
+                                textDecoration: "underline",
+                                fontSize: "13px",
+                                opacity: 0.9,
+                            }}
+                            aria-label="Privacy policy link (preview only)"
+                        >
+                            Privacy Policy
+                        </a>
                         <button
                             disabled
+                            aria-label="Accept cookies button (preview only)"
                             style={{
                                 padding: "6px 12px",
                                 borderRadius: "4px",
@@ -305,6 +456,7 @@ export function BarPreview({
                         </button>
                         <button
                             disabled
+                            aria-label="Decline cookies button (preview only)"
                             style={{
                                 padding: "6px 12px",
                                 borderRadius: "4px",
@@ -318,10 +470,13 @@ export function BarPreview({
                         >
                             Decline
                         </button>
+                        {settings.dismissible && (
+                            <CloseButton textColor={style.textColor} />
+                        )}
                     </div>
                 );
 
-            // Promotional (default)
+            // Default to announcement/promotional
             default:
                 return (
                     <div style={baseStyle}>
@@ -330,67 +485,57 @@ export function BarPreview({
                         </span>
                         {content.ctaText && <CTAButton content={content} style={style} />}
                         {settings.dismissible && (
-                            <span style={dismissButtonStyle}>✕</span>
-                        )}
-                        {/* Free plan branding */}
-                        {!isPremium && (
-                            <span
-                                style={{
-                                    position: "absolute",
-                                    right: isMobile ? "30px" : "40px",
-                                    fontSize: "9px",
-                                    opacity: 0.6,
-                                }}
-                            >
-                                Powered by AnnounceFlow
-                            </span>
+                            <CloseButton textColor={style.textColor} />
                         )}
                     </div>
                 );
         }
     };
 
-    const dismissButtonStyle: React.CSSProperties = {
-        position: "absolute",
-        right: "12px",
-        opacity: 0.7,
-        cursor: "pointer",
-        fontSize: "14px",
-        fontWeight: 400,
-    };
-
     return (
         <Card>
             <BlockStack gap="400">
-                {/* Header with device toggle */}
+                {/* Header with device toggle and dark mode */}
                 <InlineStack align="space-between" blockAlign="center">
                     <Text as="h2" variant="headingMd">
                         Preview
                     </Text>
-                    <ButtonGroup variant="segmented">
-                        <Button
-                            pressed={device === "desktop"}
-                            onClick={() => setDevice("desktop")}
-                            icon={DesktopIcon}
-                            accessibilityLabel="Desktop preview"
-                        >
-                            Desktop
-                        </Button>
-                        <Button
-                            pressed={device === "mobile"}
-                            onClick={() => setDevice("mobile")}
-                            icon={MobileIcon}
-                            accessibilityLabel="Mobile preview"
-                        >
-                            Mobile
-                        </Button>
-                    </ButtonGroup>
+                    <InlineStack gap="200">
+                        <ButtonGroup variant="segmented">
+                            <Button
+                                pressed={device === "desktop"}
+                                onClick={() => setDevice("desktop")}
+                                icon={DesktopIcon}
+                                accessibilityLabel="Desktop preview"
+                            >
+                                Desktop
+                            </Button>
+                            <Button
+                                pressed={device === "mobile"}
+                                onClick={() => setDevice("mobile")}
+                                icon={MobileIcon}
+                                accessibilityLabel="Mobile preview"
+                            >
+                                Mobile
+                            </Button>
+                        </ButtonGroup>
+                    </InlineStack>
                 </InlineStack>
+
+                {/* Color contrast warning */}
+                {hasPoorContrast && (
+                    <Box padding="200" background="bg-surface-warning-subdued" borderRadius="200">
+                        <Text as="span" variant="bodySm" tone="warning">
+                            ⚠️ Low color contrast ({contrastRatio.toFixed(1)}:1). Text may be hard
+                            to read.
+                        </Text>
+                    </Box>
+                )}
 
                 {/* Preview container */}
                 <Box
                     padding="400"
-                    background="bg-surface-secondary"
+                    background={darkMode ? "bg-surface-inverse" : "bg-surface-secondary"}
                     borderRadius="200"
                 >
                     <div
@@ -400,13 +545,22 @@ export function BarPreview({
                             transition: "width 0.3s ease",
                         }}
                     >
-                        {/* Browser mockup */}
+                        {/* Device frame */}
                         <div
                             style={{
                                 borderRadius: "8px",
                                 overflow: "hidden",
                                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                                 backgroundColor: "#fff",
+                                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "scale(1.01)";
+                                e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.15)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "scale(1)";
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
                             }}
                         >
                             {/* Browser chrome */}
@@ -553,6 +707,40 @@ function CTAButton({
         >
             {content.ctaText}
         </span>
+    );
+}
+
+// Close button component
+function CloseButton({ textColor }: { textColor: string }) {
+    return (
+        <button
+            type="button"
+            aria-label="Close announcement bar"
+            style={{
+                position: "absolute",
+                right: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                opacity: 0.7,
+                cursor: "pointer",
+                fontSize: "18px",
+                fontWeight: 400,
+                background: "none",
+                border: "none",
+                color: textColor,
+                padding: "4px",
+                lineHeight: 1,
+                transition: "opacity 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "1";
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "0.7";
+            }}
+        >
+            ✕
+        </button>
     );
 }
 

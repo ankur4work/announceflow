@@ -41,7 +41,6 @@ export async function createShop(
         installedAt: new Date(),
       },
     });
-    console.log(`Shop created successfully: ${domain}`);
     return shop;
   } catch (error) {
     console.error(`Error creating shop (${domain}):`, error);
@@ -65,7 +64,6 @@ export async function updateShopPlan(
         plan: plan,
       },
     });
-    console.log(`Shop plan updated: ${domain} -> ${plan}`);
     return shop;
   } catch (error) {
     console.error(`Error updating shop plan (${domain}):`, error);
@@ -86,7 +84,6 @@ export async function markShopUninstalled(domain: string): Promise<void> {
         uninstalledAt: new Date(),
       },
     });
-    console.log(`Shop marked as uninstalled: ${domain}`);
   } catch (error) {
     console.error(`Error marking shop as uninstalled (${domain}):`, error);
     throw new Error("Failed to mark shop as uninstalled");
@@ -106,7 +103,6 @@ export async function deleteShopData(domain: string): Promise<void> {
     });
 
     if (!shop) {
-      console.log(`Shop not found for deletion: ${domain}`);
       return;
     }
 
@@ -126,7 +122,6 @@ export async function deleteShopData(domain: string): Promise<void> {
       }),
     ]);
 
-    console.log(`Shop data completely deleted (GDPR): ${domain}`);
   } catch (error) {
     console.error(`Error deleting shop data (${domain}):`, error);
     throw new Error("Failed to delete shop data");
@@ -167,7 +162,6 @@ export async function createSubscriber(
           createdAt: new Date(), // Update capture time
         },
       });
-      console.log(`Subscriber updated: ${email} for shop ${shopId}`);
       return subscriber;
     } else {
       // Create new subscriber
@@ -180,7 +174,6 @@ export async function createSubscriber(
           createdAt: new Date(),
         },
       });
-      console.log(`Subscriber created: ${email} for shop ${shopId}`);
       return subscriber;
     }
   } catch (error) {
@@ -249,7 +242,6 @@ export async function deleteSubscriberByEmail(
         email: email,
       },
     });
-    console.log(`Subscriber deleted: ${email} from shop ${shopId}`);
   } catch (error) {
     console.error(`Error deleting subscriber (${email}):`, error);
     throw new Error("Failed to delete subscriber");
@@ -266,7 +258,6 @@ export async function deleteAllSubscribers(shopId: string): Promise<void> {
         shopId: shopId,
       },
     });
-    console.log(`Deleted ${result.count} subscribers for shop ${shopId}`);
   } catch (error) {
     console.error(`Error deleting all subscribers (shop: ${shopId}):`, error);
     throw new Error("Failed to delete subscribers");
@@ -300,7 +291,6 @@ export async function exportSubscribersCSV(shopId: string): Promise<string> {
     });
 
     const csv = header + rows.join("\n");
-    console.log(`Exported ${subscribers.length} subscribers as CSV for shop ${shopId}`);
     return csv;
   } catch (error) {
     console.error(`Error exporting subscribers CSV (shop: ${shopId}):`, error);
