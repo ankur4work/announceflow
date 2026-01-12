@@ -26,13 +26,14 @@
       "Bash(cd:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
-      "Bash(git pull:*)",
-      "Bash(npx prisma --version)",
-      "Bash(npm install)",
-      "Bash(npx prisma migrate:*)",
-      "Bash(shopify app dev:*)",
+      "Bash(git push:*)",
+      "Bash(git -C C:/Users/isunn/OneDrive/문서/13\\\\ claude\\\\ code/jan/AnnounceFlow rev-parse:*)",
+      "Bash(xargs cat:*)",
+      "Bash(npm run build:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:github.com)",
       "Bash(git checkout:*)",
-      "Bash(git push:*)"
+      "Bash(git stash:*)"
     ]
   }
 }
