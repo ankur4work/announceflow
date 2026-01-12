@@ -235,9 +235,10 @@
 
         {% comment %} ===== FREE SHIPPING BAR ===== {% endcomment %}
         {% if bar_type == 'free_shipping' %}
+          {% assign remaining_placeholder = '{remaining}' %}
           <div class="announceflow-shipping" data-shipping-bar>
             <p class="announceflow-bar__message announceflow-shipping__message" data-shipping-message>
-              {{- shipping_message_template | replace: '{remaining}', '' -}}
+              {{- shipping_message_template | replace: remaining_placeholder, '' -}}
             </p>
             {% if show_progress_bar %}
               <div class="announceflow-shipping__progress-wrapper">
