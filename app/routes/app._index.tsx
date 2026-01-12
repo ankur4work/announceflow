@@ -457,7 +457,7 @@ export default function Dashboard() {
           }}
           secondaryAction={{
             content: "Watch tutorial",
-            url: "https://help.announceflow.com/getting-started",
+            url: "https://github.com/sunnykumarsingh1997/AnnounceFlow#readme",
             external: true,
           }}
           image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
@@ -507,7 +507,7 @@ export default function Dashboard() {
               </Text>
             </BlockStack>
           </InlineStack>
-          <Button url="https://help.announceflow.com" external>
+          <Button url="https://github.com/sunnykumarsingh1997/AnnounceFlow#readme" external>
             View Documentation
           </Button>
         </InlineStack>
