@@ -9,11 +9,9 @@
 {% liquid
   assign metafield_config = shop.metafields.announceflow.bars_config.value
   assign active_bar = null
-  assign global_settings = null
 
   if metafield_config != blank
     assign bars_data = metafield_config.bars
-    assign global_settings = metafield_config.global_settings
     for bar in bars_data
       if bar.enabled == true
         assign active_bar = bar
@@ -127,9 +125,6 @@
   else
     assign font_size_px = font_size | remove: 'px' | plus: 0
   endif
-
-  assign btn_bg = text_color
-  assign btn_text = bg_color
 %}
 
 {% comment %}
