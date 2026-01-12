@@ -9,7 +9,7 @@ import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { authenticate } from "../shopify.server";
 import { getBarById, updateBar, deleteBar } from "../lib/metafields.server";
-import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
+import type { BarType, BarPosition, FontSize, CTAStyle, Currency } from "../lib/types";
 import { ColorPicker, FontSizeSelector, BarPreview } from "../components";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -51,8 +51,33 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const expiredText = formData.get("expiredText") as string;
   const hideWhenExpired = formData.get("hideWhenExpired") === "true";
 
-  if (!name || !text) {
-    return json({ success: false, error: "Name and text required" }, { status: 400 });
+  // Free shipping fields
+  const shippingThreshold = formData.get("shippingThreshold") as string;
+  const shippingCurrency = formData.get("shippingCurrency") as Currency;
+  const progressMessage = formData.get("progressMessage") as string;
+  const successMessage = formData.get("successMessage") as string;
+  const progressBarColor = formData.get("progressBarColor") as string;
+  const progressBarBgColor = formData.get("progressBarBgColor") as string;
+  const showProgressBar = formData.get("showProgressBar") === "true";
+
+  if (!name) {
+    return json({ success: false, error: "Name is required" }, { status: 400 });
+  }
+
+  // Validation for non-free_shipping types
+  if (type !== "free_shipping" && !text) {
+    return json({ success: false, error: "Text is required" }, { status: 400 });
+  }
+
+  // Free shipping validation
+  if (type === "free_shipping") {
+    const threshold = parseFloat(shippingThreshold);
+    if (isNaN(threshold) || threshold <= 0) {
+      return json({ success: false, error: "Shipping threshold must be a positive number" }, { status: 400 });
+    }
+    if (threshold >= 100000) {
+      return json({ success: false, error: "Shipping threshold must be less than 100,000" }, { status: 400 });
+    }
   }
 
   if (type === "countdown") {
@@ -72,15 +97,32 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const result = await updateBar(admin, barId, {
     name, type, enabled,
     content: {
-      text,
-      cta_text: type !== "countdown" ? (ctaText || undefined) : undefined,
-      cta_link: type !== "countdown" ? (ctaLink || undefined) : undefined,
-      cta_style: type !== "countdown" ? ctaStyle : undefined,
+      text: type === "free_shipping" ? progressMessage : text,
+      cta_text: type !== "countdown" && type !== "free_shipping" ? (ctaText || undefined) : undefined,
+      cta_link: type !== "countdown" && type !== "free_shipping" ? (ctaLink || undefined) : undefined,
+      cta_style: type !== "countdown" && type !== "free_shipping" ? ctaStyle : undefined,
       end_datetime: type === "countdown" ? endDatetime : undefined,
       expired_text: type === "countdown" ? (expiredText || "This offer has ended") : undefined,
+      free_shipping: type === "free_shipping" ? {
+        threshold: parseFloat(shippingThreshold),
+        currency: shippingCurrency,
+        progress_message: progressMessage || "Spend {remaining} more for FREE shipping!",
+        success_message: successMessage || "Congratulations! You've unlocked FREE shipping!",
+      } : undefined,
     },
-    style: { position, bg_color: bgColor, text_color: textColor, font_size: fontSize },
-    settings: { dismissible, hide_when_expired: type === "countdown" ? hideWhenExpired : undefined },
+    style: {
+      position,
+      bg_color: bgColor,
+      text_color: textColor,
+      font_size: fontSize,
+      progress_bar_color: type === "free_shipping" ? progressBarColor : undefined,
+      progress_bar_bg_color: type === "free_shipping" ? progressBarBgColor : undefined,
+    },
+    settings: {
+      dismissible,
+      hide_when_expired: type === "countdown" ? hideWhenExpired : undefined,
+      show_progress_bar: type === "free_shipping" ? showProgressBar : undefined,
+    },
   });
 
   if (result.success) return redirect("/app?updated=true");
@@ -110,6 +152,29 @@ export default function EditBar() {
   const [expiredText, setExpiredText] = useState(bar.content.expired_text || "This offer has ended");
   const [hideWhenExpired, setHideWhenExpired] = useState(bar.settings.hide_when_expired || false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Free shipping state
+  const [shippingThreshold, setShippingThreshold] = useState(
+    bar.content.free_shipping?.threshold?.toString() || "50"
+  );
+  const [shippingCurrency, setShippingCurrency] = useState<Currency>(
+    bar.content.free_shipping?.currency || "USD"
+  );
+  const [progressMessage, setProgressMessage] = useState(
+    bar.content.free_shipping?.progress_message || "Spend {remaining} more for FREE shipping!"
+  );
+  const [successMessage, setSuccessMessage] = useState(
+    bar.content.free_shipping?.success_message || "Congratulations! You've unlocked FREE shipping!"
+  );
+  const [progressBarColor, setProgressBarColor] = useState(
+    bar.style.progress_bar_color || "#4CAF50"
+  );
+  const [progressBarBgColor, setProgressBarBgColor] = useState(
+    bar.style.progress_bar_bg_color || "#E0E0E0"
+  );
+  const [showProgressBar, setShowProgressBar] = useState(
+    bar.settings.show_progress_bar !== false
+  );
   const navigation = useNavigation();
   const isSaving = navigation.state === "submitting";
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -136,9 +201,17 @@ export default function EditBar() {
       dismissible !== bar.settings.dismissible ||
       endDatetime !== (bar.content.end_datetime || "") ||
       expiredText !== (bar.content.expired_text || "This offer has ended") ||
-      hideWhenExpired !== (bar.settings.hide_when_expired || false);
+      hideWhenExpired !== (bar.settings.hide_when_expired || false) ||
+      // Free shipping fields
+      shippingThreshold !== (bar.content.free_shipping?.threshold?.toString() || "50") ||
+      shippingCurrency !== (bar.content.free_shipping?.currency || "USD") ||
+      progressMessage !== (bar.content.free_shipping?.progress_message || "Spend {remaining} more for FREE shipping!") ||
+      successMessage !== (bar.content.free_shipping?.success_message || "Congratulations! You've unlocked FREE shipping!") ||
+      progressBarColor !== (bar.style.progress_bar_color || "#4CAF50") ||
+      progressBarBgColor !== (bar.style.progress_bar_bg_color || "#E0E0E0") ||
+      showProgressBar !== (bar.settings.show_progress_bar !== false);
     setIsDirty(isChanged);
-  }, [name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired, bar]);
+  }, [name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired, shippingThreshold, shippingCurrency, progressMessage, successMessage, progressBarColor, progressBarBgColor, showProgressBar, bar]);
 
 
   useEffect(() => {
@@ -154,8 +227,17 @@ export default function EditBar() {
     { label: "Promotional", value: "promotional" },
     { label: "Announcement", value: "announcement" },
     { label: "Countdown Timer", value: "countdown" },
+    { label: "Free Shipping Progress", value: "free_shipping" },
   ];
   const ctaStyleOptions = [{ label: "Primary", value: "primary" }, { label: "Secondary", value: "secondary" }, { label: "Link", value: "link" }];
+
+  // Currency options for free shipping
+  const currencyOptions = [
+    { label: "INR (₹)", value: "INR" },
+    { label: "USD ($)", value: "USD" },
+    { label: "EUR (€)", value: "EUR" },
+    { label: "GBP (£)", value: "GBP" },
+  ];
 
   // Get minimum datetime (now + 1 minute)
   const minDatetime = useMemo(() => {
@@ -174,8 +256,8 @@ export default function EditBar() {
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
     if (!name.trim()) newErrors.name = "Required";
-    if (!text.trim()) newErrors.text = "Required";
-    if (type !== "countdown" && ctaText && !ctaLink) newErrors.ctaLink = "Required with button";
+    if (type !== "free_shipping" && !text.trim()) newErrors.text = "Required";
+    if (type !== "countdown" && type !== "free_shipping" && ctaText && !ctaLink) newErrors.ctaLink = "Required with button";
     if (type === "countdown") {
       if (!endDatetime) {
         newErrors.endDatetime = "End date and time is required";
@@ -188,9 +270,18 @@ export default function EditBar() {
         }
       }
     }
+    // Free shipping validation
+    if (type === "free_shipping") {
+      const threshold = parseFloat(shippingThreshold);
+      if (isNaN(threshold) || threshold <= 0) {
+        newErrors.shippingThreshold = "Threshold must be a positive number";
+      } else if (threshold >= 100000) {
+        newErrors.shippingThreshold = "Threshold must be less than 100,000";
+      }
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [name, text, ctaText, ctaLink, type, endDatetime, enabled]);
+  }, [name, text, ctaText, ctaLink, type, endDatetime, enabled, shippingThreshold]);
 
   const handleSave = useCallback(() => {
     if (!validateForm()) { shopify.toast.show("Please fix the errors", { isError: true }); return; }
@@ -213,8 +304,16 @@ export default function EditBar() {
     formData.append("endDatetime", endDatetime);
     formData.append("expiredText", expiredText);
     formData.append("hideWhenExpired", String(hideWhenExpired));
+    // Free shipping fields
+    formData.append("shippingThreshold", shippingThreshold);
+    formData.append("shippingCurrency", shippingCurrency);
+    formData.append("progressMessage", progressMessage);
+    formData.append("successMessage", successMessage);
+    formData.append("progressBarColor", progressBarColor);
+    formData.append("progressBarBgColor", progressBarBgColor);
+    formData.append("showProgressBar", String(showProgressBar));
     submit(formData, { method: "post" });
-  }, [validateForm, submit, shopify, name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired]);
+  }, [validateForm, submit, shopify, name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired, shippingThreshold, shippingCurrency, progressMessage, successMessage, progressBarColor, progressBarBgColor, showProgressBar]);
 
   const handleDelete = useCallback(() => {
     const formData = new FormData();
@@ -225,14 +324,15 @@ export default function EditBar() {
 
   const handleTypeChange = useCallback((newType: string) => {
     setType(newType as BarType);
-    setErrors((prev) => {
-      const { endDatetime: _, ctaLink: __, ...rest } = prev;
-      return rest;
-    });
+    setErrors({});
     if (newType === "countdown" && !text) {
       setText("Sale ends in:");
     } else if (newType !== "countdown" && text === "Sale ends in:") {
       setText("");
+    }
+    // Set appropriate defaults for free shipping
+    if (newType === "free_shipping") {
+      setDismissible(false);
     }
   }, [text]);
 
@@ -292,22 +392,24 @@ export default function EditBar() {
                       error={errors.name}
                       requiredIndicator
                     />
-                    <TextField
-                      label={type === "countdown" ? "Countdown Message" : "Announcement Text"}
-                      value={text}
-                      onChange={setText}
-                      placeholder={type === "countdown" ? "Sale ends in:" : "Free shipping over $50!"}
-                      multiline={2}
-                      autoComplete="off"
-                      error={errors.text}
-                      requiredIndicator
-                      maxLength={200}
-                      showCharacterCount
-                      helpText={type === "countdown" ? "Text displayed before the countdown timer" : ""}
-                    />
+                    {type !== "free_shipping" && (
+                      <TextField
+                        label={type === "countdown" ? "Countdown Message" : "Announcement Text"}
+                        value={text}
+                        onChange={setText}
+                        placeholder={type === "countdown" ? "Sale ends in:" : "Free shipping over $50!"}
+                        multiline={2}
+                        autoComplete="off"
+                        error={errors.text}
+                        requiredIndicator
+                        maxLength={200}
+                        showCharacterCount
+                        helpText={type === "countdown" ? "Text displayed before the countdown timer" : ""}
+                      />
+                    )}
 
-                    {/* CTA Fields (non-countdown only) */}
-                    {type !== "countdown" && (
+                    {/* CTA Fields (non-countdown and non-free_shipping only) */}
+                    {type !== "countdown" && type !== "free_shipping" && (
                       <>
                         <FormLayout.Group>
                           <TextField
@@ -393,6 +495,51 @@ export default function EditBar() {
                         />
                       </>
                     )}
+
+                    {/* Free Shipping Fields */}
+                    {type === "free_shipping" && (
+                      <>
+                        <FormLayout.Group>
+                          <TextField
+                            label="Shipping Threshold Amount"
+                            type="number"
+                            value={shippingThreshold}
+                            onChange={setShippingThreshold}
+                            autoComplete="off"
+                            error={errors.shippingThreshold}
+                            requiredIndicator
+                            helpText="Minimum cart value for free shipping"
+                          />
+                          <Select
+                            label="Currency"
+                            options={currencyOptions}
+                            value={shippingCurrency}
+                            onChange={(value) => setShippingCurrency(value as Currency)}
+                            helpText="Display currency for threshold"
+                          />
+                        </FormLayout.Group>
+                        <TextField
+                          label="Progress Message"
+                          value={progressMessage}
+                          onChange={setProgressMessage}
+                          placeholder="Spend {remaining} more for FREE shipping!"
+                          autoComplete="off"
+                          helpText="Use {remaining} placeholder for the remaining amount"
+                          maxLength={150}
+                          showCharacterCount
+                        />
+                        <TextField
+                          label="Success Message"
+                          value={successMessage}
+                          onChange={setSuccessMessage}
+                          placeholder="Congratulations! You've unlocked FREE shipping!"
+                          autoComplete="off"
+                          helpText="Shown when cart value meets the threshold"
+                          maxLength={150}
+                          showCharacterCount
+                        />
+                      </>
+                    )}
                   </FormLayout>
                 </BlockStack>
               </Card>
@@ -425,6 +572,22 @@ export default function EditBar() {
                       />
                     </FormLayout.Group>
 
+                    {/* Progress Bar Colors (Free Shipping only) */}
+                    {type === "free_shipping" && (
+                      <FormLayout.Group>
+                        <ColorPicker
+                          label="Progress Bar Color"
+                          value={progressBarColor}
+                          onChange={setProgressBarColor}
+                        />
+                        <ColorPicker
+                          label="Progress Bar Background"
+                          value={progressBarBgColor}
+                          onChange={setProgressBarBgColor}
+                        />
+                      </FormLayout.Group>
+                    )}
+
                     <FontSizeSelector
                       value={fontSize}
                       onChange={setFontSize}
@@ -451,6 +614,14 @@ export default function EditBar() {
                     checked={dismissible}
                     onChange={setDismissible}
                   />
+                  {type === "free_shipping" && (
+                    <Checkbox
+                      label="Show progress bar visual"
+                      helpText="Display a visual progress bar showing how close to free shipping"
+                      checked={showProgressBar}
+                      onChange={setShowProgressBar}
+                    />
+                  )}
                 </BlockStack>
               </Card>
             </Box>
@@ -467,16 +638,25 @@ export default function EditBar() {
                   ctaLink: ctaLink,
                   endDatetime: endDatetime,
                   expiredText: expiredText,
+                  freeShipping: type === "free_shipping" ? {
+                    threshold: parseFloat(shippingThreshold) || 50,
+                    currency: shippingCurrency,
+                    progressMessage: progressMessage,
+                    successMessage: successMessage,
+                  } : undefined,
                 }}
                 style={{
                   position: position,
                   bgColor: bgColor,
                   textColor: textColor,
                   fontSize: fontSize,
+                  progressBarColor: progressBarColor,
+                  progressBarBgColor: progressBarBgColor,
                 }}
                 settings={{
                   dismissible: dismissible,
                   hideWhenExpired: hideWhenExpired,
+                  showProgressBar: showProgressBar,
                 }}
               />
 

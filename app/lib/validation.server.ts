@@ -237,6 +237,53 @@ export function validateFontSize(size?: string): {
 }
 
 /**
+ * Validate shipping threshold
+ * Must be a positive number less than 100000
+ */
+export function validateShippingThreshold(threshold?: number): {
+  valid: boolean;
+  error?: string;
+} {
+  if (threshold === undefined || threshold === null) {
+    return { valid: false, error: "Shipping threshold is required" };
+  }
+
+  if (typeof threshold !== "number" || isNaN(threshold)) {
+    return { valid: false, error: "Shipping threshold must be a number" };
+  }
+
+  if (threshold <= 0) {
+    return { valid: false, error: "Shipping threshold must be a positive number" };
+  }
+
+  if (threshold >= 100000) {
+    return { valid: false, error: "Shipping threshold must be less than 100,000" };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate currency
+ * Must be one of: INR, USD, EUR, GBP
+ */
+export function validateCurrency(currency?: string): {
+  valid: boolean;
+  error?: string;
+} {
+  const allowedCurrencies = ["INR", "USD", "EUR", "GBP"];
+
+  if (!currency || !allowedCurrencies.includes(currency)) {
+    return {
+      valid: false,
+      error: `Currency must be one of: ${allowedCurrencies.join(", ")}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Validate entire bar object before creating/updating
  * Returns comprehensive validation result
  */
@@ -306,6 +353,19 @@ export function validateBar(barData: any): {
       barData.schedule.end_date
     );
     if (!scheduleCheck.valid) errors.push(scheduleCheck.error!);
+  }
+
+  // Validate free shipping specific fields
+  if (barData.type === "free_shipping" && barData.content?.free_shipping) {
+    const thresholdCheck = validateShippingThreshold(
+      barData.content.free_shipping.threshold
+    );
+    if (!thresholdCheck.valid) errors.push(thresholdCheck.error!);
+
+    const currencyCheck = validateCurrency(
+      barData.content.free_shipping.currency
+    );
+    if (!currencyCheck.valid) errors.push(currencyCheck.error!);
   }
 
   return {

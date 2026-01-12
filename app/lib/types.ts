@@ -21,6 +21,19 @@ export type FontSize = "small" | "medium" | "large";
 // CTA Button Style
 export type CTAStyle = "primary" | "secondary" | "link";
 
+// Currency Options for Free Shipping
+export type Currency = "INR" | "USD" | "EUR" | "GBP";
+
+/**
+ * Free Shipping Content Configuration
+ */
+export interface FreeShippingContent {
+  threshold: number; // Shipping threshold amount
+  currency: Currency; // Currency code
+  progress_message: string; // Message with {remaining} placeholder
+  success_message: string; // Message when threshold is reached
+}
+
 /**
  * Bar Content Configuration
  */
@@ -33,6 +46,8 @@ export interface BarContent {
   // Countdown specific fields
   end_datetime?: string; // ISO datetime for countdown end
   expired_text?: string; // Message when countdown ends
+  // Free shipping specific fields
+  free_shipping?: FreeShippingContent;
 }
 
 /**
@@ -45,6 +60,9 @@ export interface BarStyle {
   font_size: FontSize;
   padding_vertical?: number;
   sticky?: boolean;
+  // Free shipping progress bar colors
+  progress_bar_color?: string;
+  progress_bar_bg_color?: string;
 }
 
 /**
@@ -56,6 +74,7 @@ export interface BarSettings {
   show_on_desktop?: boolean;
   cookie_duration?: number; // hours
   hide_when_expired?: boolean; // For countdown bars
+  show_progress_bar?: boolean; // For free shipping bars
 }
 
 /**

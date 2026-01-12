@@ -1,7 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { Card, BlockStack, InlineStack, Text, Box, Button, ButtonGroup } from "@shopify/polaris";
 import { DesktopIcon, MobileIcon } from "@shopify/polaris-icons";
-import type { BarType } from "../lib/types";
+import type { BarType, Currency } from "../lib/types";
+
+// Free shipping content interface
+interface FreeShippingContent {
+    threshold: number;
+    currency: Currency;
+    progressMessage: string;
+    successMessage: string;
+}
 
 // Props interface
 interface BarPreviewProps {
@@ -12,16 +20,20 @@ interface BarPreviewProps {
         ctaLink?: string;
         endDatetime?: string;
         expiredText?: string;
+        freeShipping?: FreeShippingContent;
     };
     style: {
         position: "top" | "bottom";
         bgColor: string;
         textColor: string;
         fontSize: "small" | "medium" | "large";
+        progressBarColor?: string;
+        progressBarBgColor?: string;
     };
     settings: {
         dismissible: boolean;
         hideWhenExpired?: boolean;
+        showProgressBar?: boolean;
     };
     isPremium?: boolean;
 }
@@ -36,6 +48,27 @@ const getFontSizePx = (size: string): number => {
         default:
             return 16;
     }
+};
+
+// Get currency symbol
+const getCurrencySymbol = (currency: Currency): string => {
+    switch (currency) {
+        case "INR":
+            return "₹";
+        case "EUR":
+            return "€";
+        case "GBP":
+            return "£";
+        case "USD":
+        default:
+            return "$";
+    }
+};
+
+// Format currency amount
+const formatCurrency = (amount: number, currency: Currency): string => {
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol}${amount.toFixed(2)}`;
 };
 
 // Countdown timer component
@@ -228,18 +261,72 @@ export function BarPreview({
                     </div>
                 );
 
-            case "free_shipping":
+            case "free_shipping": {
+                // Demo: show progress at 50%
+                const threshold = content.freeShipping?.threshold || 50;
+                const currency = content.freeShipping?.currency || "USD";
+                const demoCartValue = threshold * 0.5; // 50% progress for demo
+                const remaining = threshold - demoCartValue;
+                const progressPercent = 50; // Fixed 50% for preview
+
+                const progressMessage = content.freeShipping?.progressMessage || "Spend {remaining} more for FREE shipping!";
+                const displayMessage = progressMessage.replace(
+                    "{remaining}",
+                    formatCurrency(remaining, currency)
+                );
+
+                const progressBarColor = style.progressBarColor || "#4CAF50";
+                const progressBarBgColor = style.progressBarBgColor || "#E0E0E0";
+                const showProgressBar = settings.showProgressBar !== false;
+
                 return (
-                    <div style={baseStyle}>
-                        <span style={{ fontWeight: 500 }}>
-                            {content.text || "🚚 Free shipping on orders over $50!"}
-                        </span>
-                        {content.ctaText && <CTAButton content={content} style={style} />}
-                        {settings.dismissible && (
-                            <span style={dismissButtonStyle}>✕</span>
+                    <div style={{
+                        ...baseStyle,
+                        flexDirection: "column",
+                        gap: "8px",
+                    }}>
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: isMobile ? "8px" : "16px",
+                            width: "100%",
+                        }}>
+                            <span style={{ fontWeight: 500 }}>
+                                🚚 {displayMessage}
+                            </span>
+                            {settings.dismissible && (
+                                <span style={dismissButtonStyle}>✕</span>
+                            )}
+                        </div>
+                        {showProgressBar && (
+                            <div style={{
+                                width: isMobile ? "90%" : "60%",
+                                height: "8px",
+                                backgroundColor: progressBarBgColor,
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                            }}>
+                                <div style={{
+                                    width: `${progressPercent}%`,
+                                    height: "100%",
+                                    backgroundColor: progressBarColor,
+                                    borderRadius: "4px",
+                                    transition: "width 0.3s ease",
+                                }} />
+                            </div>
+                        )}
+                        {showProgressBar && (
+                            <span style={{
+                                fontSize: "11px",
+                                opacity: 0.8,
+                            }}>
+                                {formatCurrency(demoCartValue, currency)} / {formatCurrency(threshold, currency)}
+                            </span>
                         )}
                     </div>
                 );
+            }
 
             case "email_signup":
                 return (
