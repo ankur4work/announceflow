@@ -42,23 +42,28 @@ import {
 
 import { authenticate } from "../shopify.server";
 import { getBarsConfig, deleteBar, toggleBarEnabled } from "../lib/metafields.server";
+import { getShopByDomain } from "../lib/db.server";
 import type { Bar } from "../lib/types";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const url = new URL(request.url);
   const page = parseInt(url.searchParams.get("page") || "1", 10);
 
   try {
     const config = await getBarsConfig(admin);
+    
+    // Get actual plan from database
+    const shop = await getShopByDomain(session.shop);
+    const isPremium = shop?.plan === "PREMIUM";
+    
     return json({
       bars: config.bars,
       globalSettings: config.global_settings,
-      // Mock plan data - will come from billing API later
       plan: {
-        name: "Free",
-        barLimit: 1,
-        isPremium: false,
+        name: isPremium ? "Premium" : "Free",
+        barLimit: isPremium ? 999 : 1,
+        isPremium: isPremium,
       },
       error: null,
     });
@@ -74,17 +79,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
 
   if (intent === "toggle") {
     const barId = formData.get("barId") as string;
-    const result = await toggleBarEnabled(admin, barId);
+    const result = await toggleBarEnabled(admin, barId, session.shop);
     if (!result.success) {
       return json({ success: false, error: result.errors?.join(", ") }, { status: 500 });
     }
-    return json({ success: true, enabled: result.enabled });
+    const response: any = { success: true, enabled: result.enabled };
+    if (result.autoDisabled && result.autoDisabled.length > 0) {
+      response.auto_disabled = result.autoDisabled;
+    }
+    return json(response);
   }
 
   if (intent === "delete") {
@@ -204,6 +213,7 @@ export default function Dashboard() {
     const updated = searchParams.get("updated");
     const deleted = searchParams.get("deleted");
     const error = searchParams.get("error");
+    const billing = searchParams.get("billing");
 
     if (created === "true") {
       shopify.toast.show("Announcement bar created successfully");
@@ -213,13 +223,23 @@ export default function Dashboard() {
       shopify.toast.show("Announcement bar deleted");
     } else if (error === "not_found") {
       shopify.toast.show("Bar not found", { isError: true });
+    } else if (billing === "success") {
+      shopify.toast.show("Successfully upgraded to Premium! 🎉");
+      // Revalidate to refresh plan data
+      revalidator.revalidate();
+    } else if (billing === "cancelled") {
+      shopify.toast.show("Upgrade was cancelled", { isError: false });
+    } else if (billing === "failed") {
+      shopify.toast.show("Upgrade failed. Please try again.", { isError: true });
+    } else if (billing === "error") {
+      shopify.toast.show("An error occurred during upgrade. Please contact support.", { isError: true });
     }
 
     // Clear search params after showing toast
-    if (created || updated || deleted || error) {
+    if (created || updated || deleted || error || billing) {
       window.history.replaceState({}, "", "/app");
     }
-  }, [searchParams, shopify]);
+  }, [searchParams, shopify, revalidator]);
 
   // Handle fetcher toast messages
   useEffect(() => {

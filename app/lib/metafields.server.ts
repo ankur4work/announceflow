@@ -6,6 +6,7 @@
 // import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
 import type { Bar, BarsConfig } from "./types";
 import { DEFAULT_BARS_CONFIG, createDefaultBar } from "./types";
+import { getShopByDomain } from "./db.server";
 
 // Define a compatible interface for the admin client to avoid import issues
 interface AdminClient {
@@ -392,7 +393,105 @@ export async function getEnabledBars(
 }
 
 /**
+ * Check if shop can create more bars based on plan limits
+ * @param shopDomain - The shop domain
+ * @param admin - Admin client for GraphQL queries
+ * @returns Object with allowed status and optional reason
+ */
+export async function checkBarLimit(
+  shopDomain: string,
+  admin: AdminClient
+): Promise<{ allowed: boolean; reason?: string; barCount?: number; barLimit?: number; currentPlan?: string }> {
+  try {
+    // Get shop plan from database
+    const shop = await getShopByDomain(shopDomain);
+    if (!shop) {
+      return { allowed: false, reason: "Shop not found" };
+    }
+
+    const currentPlan = shop.plan;
+    const barLimit = currentPlan === "PREMIUM" ? 999 : 1; // Premium = unlimited (999), Free = 1
+
+    // Get current bars count
+    const config = await getBarsConfig(admin);
+    const barCount = config.bars.length;
+
+    // Check if limit reached
+    if (currentPlan === "FREE" && barCount >= barLimit) {
+      return {
+        allowed: false,
+        reason: "Free plan limited to 1 bar. Upgrade to Premium for unlimited bars.",
+        barCount,
+        barLimit,
+        currentPlan,
+      };
+    }
+
+    // Premium plan or under limit
+    return {
+      allowed: true,
+      barCount,
+      barLimit,
+      currentPlan,
+    };
+  } catch (error) {
+    console.error("Error checking bar limit:", error);
+    return { allowed: false, reason: "Failed to check bar limit" };
+  }
+}
+
+/**
+ * Check if shop can enable another bar (FREE plan can only have 1 enabled bar)
+ * @param shopDomain - The shop domain
+ * @param admin - Admin client for GraphQL queries
+ * @param excludeBarId - Bar ID to exclude from count (the one being enabled)
+ * @returns Object with allowed status and optional reason
+ */
+export async function checkEnabledBarLimit(
+  shopDomain: string,
+  admin: AdminClient,
+  excludeBarId?: string
+): Promise<{ allowed: boolean; reason?: string; enabledCount?: number }> {
+  try {
+    // Get shop plan from database
+    const shop = await getShopByDomain(shopDomain);
+    if (!shop) {
+      return { allowed: false, reason: "Shop not found" };
+    }
+
+    const currentPlan = shop.plan;
+
+    // Premium plan has no limit on enabled bars
+    if (currentPlan === "PREMIUM") {
+      return { allowed: true };
+    }
+
+    // FREE plan: count enabled bars (excluding the one being enabled)
+    const config = await getBarsConfig(admin);
+    const enabledBars = config.bars.filter(
+      (bar: Bar) => bar.enabled && bar.id !== excludeBarId
+    );
+    const enabledCount = enabledBars.length;
+
+    // FREE plan can only have 1 enabled bar
+    if (enabledCount >= 1) {
+      return {
+        allowed: false,
+        reason: "Free plan can only have 1 enabled bar at a time. Disable other bars or upgrade to Premium.",
+        enabledCount,
+      };
+    }
+
+    return { allowed: true, enabledCount };
+  } catch (error) {
+    console.error("Error checking enabled bar limit:", error);
+    return { allowed: false, reason: "Failed to check enabled bar limit" };
+  }
+}
+
+/**
  * Create a new bar
+ * Note: Bar limit checking should be done before calling this function
  */
 export async function createBar(
   admin: AdminClient,
@@ -490,11 +589,14 @@ export async function deleteBar(
 
 /**
  * Toggle bar enabled status
+ * Note: Enabled bar limit checking should be done before calling this function
+ * This function will auto-disable other bars if enabling on FREE plan
  */
 export async function toggleBarEnabled(
   admin: AdminClient,
-  barId: string
-): Promise<{ success: boolean; enabled?: boolean; errors?: string[] }> {
+  barId: string,
+  shopDomain?: string
+): Promise<{ success: boolean; enabled?: boolean; errors?: string[]; autoDisabled?: string[] }> {
   try {
     const config = await getBarsConfig(admin);
     const bar = config.bars.find((b) => b.id === barId);
@@ -503,13 +605,35 @@ export async function toggleBarEnabled(
       return { success: false, errors: ["Bar not found"] };
     }
 
-    bar.enabled = !bar.enabled;
+    const willBeEnabled = !bar.enabled;
+    const autoDisabled: string[] = [];
+
+    // If enabling on FREE plan, auto-disable other enabled bars
+    if (willBeEnabled && shopDomain) {
+      const shop = await getShopByDomain(shopDomain);
+      if (shop && shop.plan === "FREE") {
+        // Disable all other enabled bars
+        config.bars.forEach((b: Bar) => {
+          if (b.id !== barId && b.enabled) {
+            b.enabled = false;
+            b.updated_at = new Date().toISOString();
+            autoDisabled.push(b.id);
+          }
+        });
+      }
+    }
+
+    bar.enabled = willBeEnabled;
     bar.updated_at = new Date().toISOString();
 
     const result = await setBarsConfig(admin, config);
 
     if (result.success) {
-      return { success: true, enabled: bar.enabled };
+      return { 
+        success: true, 
+        enabled: bar.enabled,
+        autoDisabled: autoDisabled.length > 0 ? autoDisabled : undefined
+      };
     }
 
     return { success: false, errors: result.errors };

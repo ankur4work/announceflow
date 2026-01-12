@@ -86,28 +86,47 @@ export async function createSubscription(
 
 /**
  * Get active subscription for the shop
+ * Returns subscription if it's ACTIVE or PENDING (pending means approved but not yet activated)
  */
 export async function getActiveSubscription(
     admin: AdminClient
 ): Promise<any | null> {
-    const response = await admin.graphql(`#graphql
-    query {
-      appInstallation {
-        activeSubscriptions {
-          id
-          name
-          status
-          test
+    try {
+        const response = await admin.graphql(`#graphql
+        query {
+          appInstallation {
+            activeSubscriptions {
+              id
+              name
+              status
+              test
+            }
+          }
         }
-      }
+      `);
+
+        const responseJson = await response.json();
+        
+        if (responseJson.errors) {
+            console.error("GraphQL errors in getActiveSubscription:", responseJson.errors);
+            return null;
+        }
+        
+        const subscriptions = responseJson.data?.appInstallation?.activeSubscriptions || [];
+        console.log(`Found ${subscriptions.length} subscriptions:`, subscriptions);
+
+        // Find our specific plan - accept both ACTIVE and PENDING statuses
+        // PENDING means the subscription was approved but may take a moment to activate
+        const subscription = subscriptions.find((sub: any) => 
+            (sub.status === "ACTIVE" || sub.status === "PENDING") && 
+            sub.name === PLAN_NAME
+        );
+        
+        return subscription || null;
+    } catch (error) {
+        console.error("Error fetching active subscription:", error);
+        return null;
     }
-  `);
-
-    const responseJson = await response.json();
-    const subscriptions = responseJson.data?.appInstallation?.activeSubscriptions || [];
-
-    // Find our specific plan
-    return subscriptions.find((sub: any) => sub.status === "ACTIVE" && sub.name === PLAN_NAME) || null;
 }
 
 /**

@@ -94,7 +94,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
 
   const type = formData.get("type") as BarType;
@@ -164,6 +164,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (isNaN(threshold) || threshold <= 0) {
       return json({ success: false, error: "Shipping threshold must be a positive number" }, { status: 400 });
     }
+  }
+
+  // Check bar limit before creating
+  const { checkBarLimit } = await import("../lib/metafields.server");
+  const limitCheck = await checkBarLimit(session.shop, admin);
+
+  if (!limitCheck.allowed) {
+    return json(
+      {
+        success: false,
+        error: limitCheck.reason || "Bar limit reached",
+        code: "PLAN_LIMIT",
+      },
+      { status: 402 }
+    );
   }
 
   // Generate a name from the text

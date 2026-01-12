@@ -7,20 +7,32 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { getBarsConfig, createBar } from "../lib/metafields.server";
+import { getBarsConfig, createBar, checkBarLimit } from "../lib/metafields.server";
+import { getShopByDomain } from "../lib/db.server";
 import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
 import { validateBar } from "../lib/validation.server";
 
 // GET /api/bars - List all bars
 export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
-        const { admin } = await authenticate.admin(request);
+        const { admin, session } = await authenticate.admin(request);
         const config = await getBarsConfig(admin);
+        
+        // Get shop plan and bar counts
+        const shop = await getShopByDomain(session.shop);
+        const currentPlan = shop?.plan || "FREE";
+        const barLimit = currentPlan === "PREMIUM" ? 999 : 1;
+        const barCount = config.bars.length;
+        const canCreateMore = currentPlan === "PREMIUM" || barCount < barLimit;
 
         return json({
             success: true,
             bars: config.bars,
             global_settings: config.global_settings,
+            plan: currentPlan,
+            bar_limit: barLimit,
+            bar_count: barCount,
+            can_create_more: canCreateMore,
         });
     } catch (error) {
         console.error("Error fetching bars:", error);
@@ -38,8 +50,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-        const { admin } = await authenticate.admin(request);
+        const { admin, session } = await authenticate.admin(request);
         const body = await request.json();
+
+        // Check bar limit before creating
+        const limitCheck = await checkBarLimit(session.shop, admin);
+        if (!limitCheck.allowed) {
+            const shop = await getShopByDomain(session.shop);
+            return json(
+                {
+                    error: limitCheck.reason || "Bar limit reached",
+                    code: "PLAN_LIMIT",
+                    current_plan: limitCheck.currentPlan || shop?.plan || "FREE",
+                    bar_limit: limitCheck.barLimit || 1,
+                    bar_count: limitCheck.barCount || 0,
+                    upgrade_url: "/api/billing/subscribe",
+                },
+                { status: 402 }
+            );
+        }
 
         // Validate input using shared validation logic
         const validation = validateBar(body);
