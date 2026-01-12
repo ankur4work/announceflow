@@ -139,6 +139,7 @@ export interface GlobalSettings {
   default_text_color?: string;
   analytics_enabled?: boolean;
   max_bars_displayed?: number;
+  show_branding?: boolean;
 }
 
 /**

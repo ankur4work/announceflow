@@ -25,7 +25,14 @@
       "Bash(cat:*)",
       "Bash(cd:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git pull:*)",
+      "Bash(npx prisma --version)",
+      "Bash(npm install)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(shopify app dev:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)"
     ]
   }
 }
