@@ -455,11 +455,6 @@ export default function Dashboard() {
             icon: PlusIcon,
             onAction: () => navigate("/app/bars/new"),
           }}
-          secondaryAction={{
-            content: "Watch tutorial",
-            url: "https://github.com/sunnykumarsingh1997/AnnounceFlow#readme",
-            external: true,
-          }}
           image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
         >
           <p>
@@ -494,24 +489,6 @@ export default function Dashboard() {
         </InlineGrid>
       </BlockStack>
 
-      <Card>
-        <InlineStack align="space-between" blockAlign="center" wrap={false}>
-          <InlineStack gap="300" blockAlign="center">
-            <Icon source={QuestionCircleIcon} tone="base" />
-            <BlockStack gap="050">
-              <Text as="span" variant="bodyMd" fontWeight="semibold">
-                Need help getting started?
-              </Text>
-              <Text as="span" variant="bodySm" tone="subdued">
-                Check out our documentation and tutorials
-              </Text>
-            </BlockStack>
-          </InlineStack>
-          <Button url="https://github.com/sunnykumarsingh1997/AnnounceFlow#readme" external>
-            View Documentation
-          </Button>
-        </InlineStack>
-      </Card>
     </BlockStack>
   );
 
