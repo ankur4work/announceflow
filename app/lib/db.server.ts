@@ -229,6 +229,49 @@ export async function getSubscriberByEmail(
 }
 
 /**
+ * Check if a subscriber already exists
+ */
+export async function subscriberExists(
+  shopId: string,
+  email: string
+): Promise<boolean> {
+  try {
+    const subscriber = await prisma.emailSubscriber.findFirst({
+      where: {
+        shopId: shopId,
+        email: email,
+      },
+      select: { id: true },
+    });
+    return subscriber !== null;
+  } catch (error) {
+    console.error(`Error checking subscriber (${email}):`, error);
+    return false;
+  }
+}
+
+/**
+ * Delete a subscriber by ID
+ */
+export async function deleteSubscriber(
+  subscriberId: string,
+  shopId: string
+): Promise<boolean> {
+  try {
+    const result = await prisma.emailSubscriber.deleteMany({
+      where: {
+        id: subscriberId,
+        shopId: shopId,
+      },
+    });
+    return result.count > 0;
+  } catch (error) {
+    console.error(`Error deleting subscriber (${subscriberId}):`, error);
+    throw new Error("Failed to delete subscriber");
+  }
+}
+
+/**
  * Delete a subscriber by email
  */
 export async function deleteSubscriberByEmail(
@@ -245,6 +288,56 @@ export async function deleteSubscriberByEmail(
   } catch (error) {
     console.error(`Error deleting subscriber (${email}):`, error);
     throw new Error("Failed to delete subscriber");
+  }
+}
+
+/**
+ * Get subscriber statistics for a shop
+ */
+export async function getSubscriberStats(shopId: string): Promise<{
+  total: number;
+  thisWeek: number;
+  thisMonth: number;
+}> {
+  try {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [total, thisWeek, thisMonth] = await Promise.all([
+      prisma.emailSubscriber.count({ where: { shopId } }),
+      prisma.emailSubscriber.count({
+        where: { shopId, createdAt: { gte: startOfWeek } },
+      }),
+      prisma.emailSubscriber.count({
+        where: { shopId, createdAt: { gte: startOfMonth } },
+      }),
+    ]);
+
+    return { total, thisWeek, thisMonth };
+  } catch (error) {
+    console.error(`Error getting subscriber stats (shop: ${shopId}):`, error);
+    return { total: 0, thisWeek: 0, thisMonth: 0 };
+  }
+}
+
+/**
+ * Get subscriber count for a shop
+ */
+export async function getSubscriberCount(shopId: string): Promise<number> {
+  try {
+    const count = await prisma.emailSubscriber.count({
+      where: {
+        shopId: shopId,
+      },
+    });
+    return count;
+  } catch (error) {
+    console.error(`Error getting subscriber count (shop: ${shopId}):`, error);
+    return 0;
   }
 }
 

@@ -47,9 +47,11 @@ import {
 import {
   hasActivePremiumPlan,
   createSubscription,
-  PLAN_NAME,
-  PLAN_PRICE,
 } from "../lib/billing.server";
+
+// Plan constants (client-side safe)
+const PLAN_NAME = "AnnounceFlow Premium";
+const PLAN_PRICE = 9.99;
 import { ColorPicker } from "../components";
 import type { GlobalSettings, BarPosition } from "../lib/types";
 
