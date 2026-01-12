@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import type { Shop, EmailSubscriber } from "@prisma/client";
 import prisma from "../db.server";
+import { normalizeShopDomain } from "./auth.server";
 
 export { prisma };
 
@@ -13,11 +14,22 @@ export { prisma };
  */
 export async function getShopByDomain(domain: string): Promise<Shop | null> {
   try {
+    // Normalize domain to ensure consistent lookup
+    const normalizedDomain = normalizeShopDomain(domain);
     const shop = await prisma.shop.findUnique({
       where: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
       },
     });
+    // If not found with normalized, try original (for backward compatibility)
+    if (!shop) {
+      const shopOriginal = await prisma.shop.findUnique({
+        where: {
+          shopDomain: domain,
+        },
+      });
+      return shopOriginal;
+    }
     return shop;
   } catch (error) {
     console.error(`Error fetching shop by domain (${domain}):`, error);
@@ -33,15 +45,17 @@ export async function createShop(
   accessToken: string
 ): Promise<Shop> {
   try {
+    // Normalize domain to ensure consistent storage
+    const normalizedDomain = normalizeShopDomain(domain);
     const shop = await prisma.shop.create({
       data: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
         accessToken: accessToken,
         plan: "FREE",
         installedAt: new Date(),
       },
     });
-    console.log(`Shop created successfully: ${domain}`);
+    console.log(`Shop created successfully: ${normalizedDomain}`);
     return shop;
   } catch (error) {
     console.error(`Error creating shop (${domain}):`, error);
@@ -57,16 +71,37 @@ export async function updateShopPlan(
   plan: "FREE" | "PREMIUM"
 ): Promise<Shop> {
   try {
-    const shop = await prisma.shop.update({
-      where: {
-        shopDomain: domain,
-      },
-      data: {
-        plan: plan,
-      },
-    });
-    console.log(`Shop plan updated: ${domain} -> ${plan}`);
-    return shop;
+    // Normalize domain to ensure consistent lookup
+    const normalizedDomain = normalizeShopDomain(domain);
+    
+    // Try to update with normalized domain first
+    try {
+      const shop = await prisma.shop.update({
+        where: {
+          shopDomain: normalizedDomain,
+        },
+        data: {
+          plan: plan,
+        },
+      });
+      console.log(`Shop plan updated: ${normalizedDomain} -> ${plan}`);
+      return shop;
+    } catch (updateError: any) {
+      // If not found with normalized, try original domain (for backward compatibility)
+      if (updateError.code === 'P2025' || updateError.message?.includes('Record to update not found')) {
+        const shop = await prisma.shop.update({
+          where: {
+            shopDomain: domain,
+          },
+          data: {
+            plan: plan,
+          },
+        });
+        console.log(`Shop plan updated (using original domain): ${domain} -> ${plan}`);
+        return shop;
+      }
+      throw updateError;
+    }
   } catch (error) {
     console.error(`Error updating shop plan (${domain}):`, error);
     throw new Error("Failed to update shop plan");

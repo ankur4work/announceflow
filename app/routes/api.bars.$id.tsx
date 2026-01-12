@@ -14,7 +14,9 @@ import {
   updateBar,
   deleteBar,
   toggleBarEnabled,
+  checkEnabledBarLimit,
 } from "../lib/metafields.server";
+import { getShopByDomain } from "../lib/db.server";
 import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
 import {
   validateBarText,
@@ -54,7 +56,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 // PUT/PATCH/DELETE /api/bars/:id
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
-    const { admin } = await authenticate.admin(request);
+    const { admin, session } = await authenticate.admin(request);
     const barId = params.id;
 
     if (!barId) {
@@ -83,6 +85,25 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
       // If body has explicit enabled value, update it
       if (typeof body.enabled === "boolean") {
+        // Check enabled bar limit if enabling on FREE plan
+        if (body.enabled) {
+          const limitCheck = await checkEnabledBarLimit(session.shop, admin, barId);
+          if (!limitCheck.allowed) {
+            const shop = await getShopByDomain(session.shop);
+            return json(
+              {
+                error: limitCheck.reason || "Enabled bar limit reached",
+                code: "PLAN_LIMIT",
+                current_plan: shop?.plan || "FREE",
+                bar_limit: 1,
+                enabled_count: limitCheck.enabledCount || 0,
+                upgrade_url: "/api/billing/subscribe",
+              },
+              { status: 402 }
+            );
+          }
+        }
+
         const result = await updateBar(admin, barId, { enabled: body.enabled });
 
         if (result.success) {
@@ -99,15 +120,39 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         );
       }
 
-      // Otherwise toggle
-      const result = await toggleBarEnabled(admin, barId);
+      // Otherwise toggle - check limit before toggling
+      // Get current bar state first
+      const currentBar = await getBarById(admin, barId);
+      if (!currentBar) {
+        return json({ success: false, error: "Bar not found" }, { status: 404 });
+      }
+
+      // If enabling, check limit
+      if (!currentBar.enabled) {
+        const limitCheck = await checkEnabledBarLimit(session.shop, admin, barId);
+        if (!limitCheck.allowed) {
+          // Auto-disable other bars instead of returning error (as per requirement)
+          // The toggleBarEnabled function will handle this
+        }
+      }
+
+      // Toggle with shop domain for auto-disable logic
+      const result = await toggleBarEnabled(admin, barId, session.shop);
 
       if (result.success) {
-        return json({
+        const response: any = {
           success: true,
           enabled: result.enabled,
           message: result.enabled ? "Bar enabled" : "Bar disabled",
-        });
+        };
+        
+        // Include info about auto-disabled bars if any
+        if (result.autoDisabled && result.autoDisabled.length > 0) {
+          response.auto_disabled = result.autoDisabled;
+          response.message += `. ${result.autoDisabled.length} other bar(s) were automatically disabled (Free plan limit: 1 enabled bar).`;
+        }
+
+        return json(response);
       }
 
       return json(
@@ -119,6 +164,25 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     // PUT - Update bar
     if (method === "PUT") {
       const body = await request.json();
+      
+      // Check enabled bar limit if enabling on FREE plan
+      if (body.enabled === true) {
+        const limitCheck = await checkEnabledBarLimit(session.shop, admin, barId);
+        if (!limitCheck.allowed) {
+          const shop = await getShopByDomain(session.shop);
+          return json(
+            {
+              error: limitCheck.reason || "Enabled bar limit reached",
+              code: "PLAN_LIMIT",
+              current_plan: shop?.plan || "FREE",
+              bar_limit: 1,
+              enabled_count: limitCheck.enabledCount || 0,
+              upgrade_url: "/api/billing/subscribe",
+            },
+            { status: 402 }
+          );
+        }
+      }
 
       // Validate name
       const nameCheck = validateBarName(body.name);
