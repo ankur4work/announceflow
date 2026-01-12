@@ -1,6 +1,6 @@
 {% comment %}
   AnnounceFlow Announcement Bar Block
-  Supports: promotional, announcement, countdown types
+  Supports: promotional, announcement, countdown, email_signup, free_shipping, cookie_consent
   Reads from shop.metafields.announceflow.bars_config
 {% endcomment %}
 
@@ -9,9 +9,11 @@
 {% liquid
   assign metafield_config = shop.metafields.announceflow.bars_config.value
   assign active_bar = null
+  assign global_settings = null
 
   if metafield_config != blank
     assign bars_data = metafield_config.bars
+    assign global_settings = metafield_config.global_settings
     for bar in bars_data
       if bar.enabled == true
         assign active_bar = bar
@@ -31,18 +33,48 @@
     assign expired_text = active_bar.content.expired_text | default: 'This offer has ended'
     assign bg_color = active_bar.style.bg_color | default: '#000000'
     assign text_color = active_bar.style.text_color | default: '#FFFFFF'
+    assign button_bg_color = active_bar.style.button_bg_color | default: text_color
+    assign button_text_color = active_bar.style.button_text_color | default: bg_color
+    assign progress_color = active_bar.style.progress_color | default: text_color
+    assign progress_bg_color = active_bar.style.progress_bg_color | default: 'rgba(255,255,255,0.3)'
     assign position = active_bar.style.position | default: 'top'
     assign sticky = active_bar.style.sticky | default: false
     assign font_size = active_bar.style.font_size | default: 'medium'
     assign padding_y = active_bar.style.padding_vertical | default: 12
     assign dismissible = active_bar.settings.dismissible | default: true
     assign hide_when_expired = active_bar.settings.hide_when_expired | default: false
+    assign show_decline = active_bar.settings.show_decline | default: true
+    assign show_progress_bar = active_bar.settings.show_progress_bar | default: true
     assign show_cta = false
     if cta_text != blank and cta_link != blank
       assign show_cta = true
     endif
     assign data_source = 'metafield'
     assign bar_unique_id = active_bar.id
+
+    comment
+      Email Capture specific fields
+    endcomment
+    assign email_placeholder = active_bar.content.placeholder | default: 'Enter your email'
+    assign email_button_text = active_bar.content.button_text | default: 'Subscribe'
+    assign email_success_message = active_bar.content.success_message | default: 'Thanks! Check your inbox.'
+    assign email_error_message = active_bar.content.error_message | default: 'Please enter a valid email'
+
+    comment
+      Cookie Consent specific fields
+    endcomment
+    assign accept_text = active_bar.content.accept_text | default: 'Accept'
+    assign decline_text = active_bar.content.decline_text | default: 'Decline'
+    assign privacy_link = active_bar.content.privacy_link | default: '/pages/privacy-policy'
+    assign privacy_text = active_bar.content.privacy_text | default: 'Learn more'
+
+    comment
+      Free Shipping specific fields
+    endcomment
+    assign shipping_threshold = active_bar.content.threshold | default: 50
+    assign shipping_currency = active_bar.content.currency | default: 'USD'
+    assign shipping_message_template = active_bar.content.message_template | default: 'Spend {remaining} more for FREE shipping!'
+    assign shipping_success_message = active_bar.content.success_message | default: "You've unlocked FREE shipping!"
   else
     assign bar_id = 'announceflow-bar-' | append: block.id
     assign bar_type = 'promotional'
@@ -54,15 +86,33 @@
     assign expired_text = 'This offer has ended'
     assign bg_color = block.settings.background_color
     assign text_color = block.settings.text_color
+    assign button_bg_color = text_color
+    assign button_text_color = bg_color
+    assign progress_color = text_color
+    assign progress_bg_color = 'rgba(255,255,255,0.3)'
     assign position = block.settings.position
     assign sticky = block.settings.sticky
     assign font_size = '14px'
     assign padding_y = 12
     assign dismissible = block.settings.dismissible
     assign hide_when_expired = false
+    assign show_decline = true
+    assign show_progress_bar = true
     assign show_cta = block.settings.show_cta
     assign data_source = 'settings'
     assign bar_unique_id = block.id
+    assign email_placeholder = 'Enter your email'
+    assign email_button_text = 'Subscribe'
+    assign email_success_message = 'Thanks! Check your inbox.'
+    assign email_error_message = 'Please enter a valid email'
+    assign accept_text = 'Accept'
+    assign decline_text = 'Decline'
+    assign privacy_link = '/pages/privacy-policy'
+    assign privacy_text = 'Learn more'
+    assign shipping_threshold = 50
+    assign shipping_currency = 'USD'
+    assign shipping_message_template = 'Spend {remaining} more for FREE shipping!'
+    assign shipping_success_message = "You've unlocked FREE shipping!"
   endif
 
   if data_source == 'metafield'
@@ -82,11 +132,21 @@
   assign btn_text = bg_color
 %}
 
+{% comment %}
+  Render bar based on type - some types (cookie_consent, email_signup) may show even without message
+{% endcomment %}
+{% assign should_render = false %}
 {% if message != blank %}
+  {% assign should_render = true %}
+{% elsif bar_type == 'cookie_consent' or bar_type == 'email_signup' or bar_type == 'free_shipping' %}
+  {% assign should_render = true %}
+{% endif %}
+
+{% if should_render %}
   <div
     id="{{ bar_id }}"
     class="announceflow-bar announceflow-bar--{{ position }} announceflow-bar--{{ bar_type }}{% if sticky %} announceflow-bar--sticky{% endif %}"
-    style="--af-bg: {{ bg_color }}; --af-text: {{ text_color }}; --af-font-size: {{ font_size_px }}px; --af-padding-y: {{ padding_y }}px; --af-btn-bg: {{ btn_bg }}; --af-btn-text: {{ btn_text }};"
+    style="--af-bg: {{ bg_color }}; --af-text: {{ text_color }}; --af-font-size: {{ font_size_px }}px; --af-padding-y: {{ padding_y }}px; --af-btn-bg: {{ button_bg_color }}; --af-btn-text: {{ button_text_color }}; --af-progress-color: {{ progress_color }}; --af-progress-bg: {{ progress_bg_color }};"
     role="banner"
     aria-label="Store announcement"
     data-announceflow-bar
@@ -98,12 +158,33 @@
       data-expired-text="{{ expired_text | escape }}"
       data-hide-when-expired="{{ hide_when_expired }}"
     {% endif %}
+    {% if bar_type == 'email_signup' %}
+      data-email-placeholder="{{ email_placeholder | escape }}"
+      data-email-button-text="{{ email_button_text | escape }}"
+      data-success-message="{{ email_success_message | escape }}"
+      data-error-message="{{ email_error_message | escape }}"
+    {% endif %}
+    {% if bar_type == 'free_shipping' %}
+      data-threshold="{{ shipping_threshold }}"
+      data-currency="{{ shipping_currency }}"
+      data-message-template="{{ shipping_message_template | escape }}"
+      data-success-message="{{ shipping_success_message | escape }}"
+      data-show-progress-bar="{{ show_progress_bar }}"
+    {% endif %}
   >
     <div class="announceflow-bar__inner">
       <div class="announceflow-bar__content">
-        <p class="announceflow-bar__message">{{- message -}}</p>
+        {% comment %} ===== PROMOTIONAL / ANNOUNCEMENT BAR ===== {% endcomment %}
+        {% if bar_type == 'promotional' or bar_type == 'announcement' %}
+          <p class="announceflow-bar__message">{{- message -}}</p>
+          {% if show_cta and cta_text != blank %}
+            <a href="{{ cta_link }}" class="announceflow-bar__cta announceflow-bar__cta--{{ cta_style }}">{{- cta_text -}}</a>
+          {% endif %}
+        {% endif %}
 
+        {% comment %} ===== COUNTDOWN BAR ===== {% endcomment %}
         {% if bar_type == 'countdown' %}
+          <p class="announceflow-bar__message">{{- message -}}</p>
           <div class="announceflow-countdown" data-countdown-display>
             <div class="announceflow-countdown__unit">
               <span class="announceflow-countdown__value" data-days>00</span>
@@ -128,12 +209,72 @@
           <p class="announceflow-bar__expired" data-expired-message style="display: none;">{{ expired_text }}</p>
         {% endif %}
 
-        {% if show_cta and cta_text != blank and bar_type != 'countdown' %}
-          <a href="{{ cta_link }}" class="announceflow-bar__cta announceflow-bar__cta--{{ cta_style }}">{{- cta_text -}}</a>
+        {% comment %} ===== EMAIL CAPTURE BAR ===== {% endcomment %}
+        {% if bar_type == 'email_signup' %}
+          <p class="announceflow-bar__message">{{- message | default: 'Get 10% off your first order!' -}}</p>
+          <form class="announceflow-email-form" data-email-form>
+            <div class="announceflow-email-form__inputs">
+              <input
+                type="email"
+                class="announceflow-email-form__input"
+                placeholder="{{ email_placeholder }}"
+                required
+                data-email-input
+                autocomplete="email"
+              >
+              <button type="submit" class="announceflow-email-form__button" data-email-submit>
+                <span data-button-text>{{ email_button_text }}</span>
+                <span class="announceflow-email-form__spinner" data-spinner style="display: none;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="31.4" stroke-dashoffset="10">
+                      <animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="1s" repeatCount="indefinite"/>
+                    </circle>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <p class="announceflow-email-form__message announceflow-email-form__message--success" data-success-msg style="display: none;">{{ email_success_message }}</p>
+            <p class="announceflow-email-form__message announceflow-email-form__message--error" data-error-msg style="display: none;">{{ email_error_message }}</p>
+          </form>
+        {% endif %}
+
+        {% comment %} ===== FREE SHIPPING BAR ===== {% endcomment %}
+        {% if bar_type == 'free_shipping' %}
+          <div class="announceflow-shipping" data-shipping-bar>
+            <p class="announceflow-bar__message announceflow-shipping__message" data-shipping-message>
+              {{- shipping_message_template | replace: '{remaining}', '' -}}
+            </p>
+            {% if show_progress_bar %}
+              <div class="announceflow-shipping__progress-wrapper">
+                <div class="announceflow-shipping__progress">
+                  <div class="announceflow-shipping__progress-bar" data-progress-bar style="width: 0%;"></div>
+                </div>
+                <span class="announceflow-shipping__progress-text" data-progress-text>0%</span>
+              </div>
+            {% endif %}
+            <p class="announceflow-shipping__success" data-shipping-success style="display: none;">{{ shipping_success_message }}</p>
+          </div>
+        {% endif %}
+
+        {% comment %} ===== COOKIE CONSENT BAR ===== {% endcomment %}
+        {% if bar_type == 'cookie_consent' %}
+          <p class="announceflow-bar__message">{{- message | default: 'We use cookies to improve your experience.' -}}</p>
+          <div class="announceflow-cookie__buttons">
+            <button type="button" class="announceflow-cookie__btn announceflow-cookie__btn--accept" data-cookie-accept>
+              {{ accept_text }}
+            </button>
+            {% if show_decline %}
+              <button type="button" class="announceflow-cookie__btn announceflow-cookie__btn--decline" data-cookie-decline>
+                {{ decline_text }}
+              </button>
+            {% endif %}
+          </div>
+          <a href="{{ privacy_link }}" class="announceflow-cookie__privacy-link">{{ privacy_text }}</a>
         {% endif %}
       </div>
 
-      {% if dismissible %}
+      {% comment %} Close button - not shown for cookie consent (uses Accept/Decline instead) {% endcomment %}
+      {% if dismissible and bar_type != 'cookie_consent' %}
         <button type="button" class="announceflow-bar__close" aria-label="Close announcement" data-announceflow-dismiss="{{ bar_id }}">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -147,27 +288,52 @@
 <script>
 /**
  * AnnounceFlow - Announcement Bar JavaScript
- * Handles bar visibility, dismiss functionality, and countdown timers
+ * Handles bar visibility, dismiss functionality, countdown timers,
+ * email capture, cookie consent, and free shipping progress
  */
 (function() {
   'use strict';
 
   // Configuration
   var STORAGE_PREFIX = 'af_dismissed_';
+  var EMAIL_SUBMITTED_PREFIX = 'af_email_submitted_';
+  var COOKIE_CONSENT_KEY = 'announceflow_consent';
   var DISMISS_DURATION = 86400000; // 24 hours in milliseconds
   var countdownIntervals = {};
 
   /**
    * Initialize all announcement bars on the page
-   * - Check if previously dismissed
-   * - Show with animation
-   * - Initialize countdown timers
    */
   function init() {
     var bars = document.querySelectorAll('[data-announceflow-bar]');
     bars.forEach(function(bar) {
       var barId = bar.getAttribute('data-bar-id');
       var barType = bar.getAttribute('data-bar-type');
+
+      // Cookie consent: check if already accepted/declined
+      if (barType === 'cookie_consent') {
+        if (hasConsentChoice()) {
+          bar.style.display = 'none';
+          return;
+        }
+        initCookieConsent(bar);
+        bar.classList.add('announceflow-bar--visible');
+        return;
+      }
+
+      // Email signup: check if already submitted
+      if (barType === 'email_signup') {
+        if (hasEmailSubmitted(barId)) {
+          bar.style.display = 'none';
+          return;
+        }
+        initEmailCapture(bar);
+      }
+
+      // Free shipping: initialize
+      if (barType === 'free_shipping') {
+        initFreeShipping(bar);
+      }
 
       // Don't show if user previously dismissed
       if (isDismissed(barId)) {
@@ -192,8 +358,7 @@
   }
 
   /**
-   * Check if a bar was previously dismissed and is still within dismiss duration
-   * Uses localStorage with automatic expiry
+   * Check if a bar was previously dismissed
    */
   function isDismissed(barId) {
     try {
@@ -201,23 +366,41 @@
       if (!dismissedAt) return false;
 
       var timestamp = parseInt(dismissedAt, 10);
-      // Clear expired dismissals
       if (Date.now() - timestamp > DISMISS_DURATION) {
         localStorage.removeItem(STORAGE_PREFIX + barId);
         return false;
       }
       return true;
     } catch (e) {
-      // localStorage might be unavailable (private browsing, etc.)
+      return false;
+    }
+  }
+
+  /**
+   * Check if email was already submitted for this bar
+   */
+  function hasEmailSubmitted(barId) {
+    try {
+      return localStorage.getItem(EMAIL_SUBMITTED_PREFIX + barId) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Check if user has already made a cookie consent choice
+   */
+  function hasConsentChoice() {
+    try {
+      var consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+      return consent === 'accepted' || consent === 'declined';
+    } catch (e) {
       return false;
     }
   }
 
   /**
    * Handle dismiss button click
-   * - Stop any countdown timers
-   * - Animate out and hide
-   * - Store dismissal in localStorage
    */
   function handleDismiss(event) {
     var btn = event.currentTarget;
@@ -227,32 +410,36 @@
 
     var barId = bar.getAttribute('data-bar-id');
 
-    // Clear countdown interval if running
     if (countdownIntervals[barId]) {
       clearInterval(countdownIntervals[barId]);
       delete countdownIntervals[barId];
     }
 
-    // Animate out
     bar.classList.add('announceflow-bar--dismissing');
     bar.classList.remove('announceflow-bar--visible');
 
-    // Store dismissal
     try {
       localStorage.setItem(STORAGE_PREFIX + barId, Date.now().toString());
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    } catch (e) {}
 
-    // Hide after animation completes
     setTimeout(function() {
       bar.style.display = 'none';
     }, 300);
   }
 
   /**
-   * Initialize countdown timer for a bar
-   * Handles real-time countdown, expiration, and urgent state (final minute)
+   * Hide bar with animation
+   */
+  function hideBar(bar) {
+    bar.classList.add('announceflow-bar--dismissing');
+    bar.classList.remove('announceflow-bar--visible');
+    setTimeout(function() {
+      bar.style.display = 'none';
+    }, 300);
+  }
+
+  /**
+   * Initialize countdown timer
    */
   function initCountdown(bar) {
     var barId = bar.getAttribute('data-bar-id');
@@ -262,7 +449,6 @@
     if (!endDatetime) return;
 
     var endDate = new Date(endDatetime);
-    // Silently fail if invalid date - don't log to console in production
     if (isNaN(endDate.getTime())) return;
 
     var daysEl = bar.querySelector('[data-days]');
@@ -278,15 +464,13 @@
       var target = endDate.getTime();
       var diff = target - now;
 
-      // Handle expiration
       if (diff <= 0) {
         clearInterval(countdownIntervals[barId]);
         delete countdownIntervals[barId];
         bar.classList.remove('announceflow-bar--urgent');
 
         if (hideWhenExpired) {
-          bar.classList.add('announceflow-bar--dismissing');
-          setTimeout(function() { bar.style.display = 'none'; }, 300);
+          hideBar(bar);
         } else {
           if (countdownDisplay) countdownDisplay.style.display = 'none';
           if (messageEl) messageEl.style.display = 'none';
@@ -296,7 +480,6 @@
         return;
       }
 
-      // Add urgent class when less than 1 minute remaining (for pulse animation)
       if (diff <= 60000) {
         bar.classList.add('announceflow-bar--urgent');
       } else {
@@ -314,10 +497,6 @@
       if (secondsEl) secondsEl.textContent = padZero(seconds);
     }
 
-    /**
-     * Pad single digit numbers with leading zero
-     * For days > 99, show as-is (e.g., 100, 365)
-     */
     function padZero(num) {
       if (num >= 100) return String(num);
       return num < 10 ? '0' + num : String(num);
@@ -325,6 +504,239 @@
 
     updateCountdown();
     countdownIntervals[barId] = setInterval(updateCountdown, 1000);
+  }
+
+  /**
+   * Initialize Email Capture functionality
+   */
+  function initEmailCapture(bar) {
+    var barId = bar.getAttribute('data-bar-id');
+    var form = bar.querySelector('[data-email-form]');
+    var input = bar.querySelector('[data-email-input]');
+    var submitBtn = bar.querySelector('[data-email-submit]');
+    var buttonText = bar.querySelector('[data-button-text]');
+    var spinner = bar.querySelector('[data-spinner]');
+    var successMsg = bar.querySelector('[data-success-msg]');
+    var errorMsg = bar.querySelector('[data-error-msg]');
+
+    if (!form || !input) return;
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      var email = input.value.trim();
+
+      // Validate email format
+      var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        if (errorMsg) {
+          errorMsg.textContent = bar.getAttribute('data-error-message') || 'Please enter a valid email';
+          errorMsg.style.display = 'block';
+        }
+        if (successMsg) successMsg.style.display = 'none';
+        return;
+      }
+
+      // Show loading state
+      if (buttonText) buttonText.style.display = 'none';
+      if (spinner) spinner.style.display = 'inline-flex';
+      if (submitBtn) submitBtn.disabled = true;
+      if (errorMsg) errorMsg.style.display = 'none';
+
+      // POST to subscribe endpoint
+      fetch('/apps/announceflow/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          bar_id: barId
+        })
+      })
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        // Reset button state
+        if (buttonText) buttonText.style.display = 'inline';
+        if (spinner) spinner.style.display = 'none';
+        if (submitBtn) submitBtn.disabled = false;
+
+        if (data.success) {
+          // Success - hide form, show success message
+          if (form) form.style.display = 'none';
+          if (successMsg) {
+            successMsg.textContent = bar.getAttribute('data-success-message') || 'Thanks! Check your inbox.';
+            successMsg.style.display = 'block';
+          }
+
+          // Store submission to prevent repeat
+          try {
+            localStorage.setItem(EMAIL_SUBMITTED_PREFIX + barId, 'true');
+          } catch (e) {}
+
+          // Auto-hide after 3 seconds
+          setTimeout(function() {
+            hideBar(bar);
+          }, 3000);
+        } else {
+          // Error
+          if (errorMsg) {
+            errorMsg.textContent = data.error || bar.getAttribute('data-error-message') || 'Something went wrong. Please try again.';
+            errorMsg.style.display = 'block';
+          }
+        }
+      })
+      .catch(function(err) {
+        // Reset button state
+        if (buttonText) buttonText.style.display = 'inline';
+        if (spinner) spinner.style.display = 'none';
+        if (submitBtn) submitBtn.disabled = false;
+
+        if (errorMsg) {
+          errorMsg.textContent = 'Something went wrong. Please try again.';
+          errorMsg.style.display = 'block';
+        }
+      });
+    });
+  }
+
+  /**
+   * Initialize Cookie Consent functionality
+   */
+  function initCookieConsent(bar) {
+    var acceptBtn = bar.querySelector('[data-cookie-accept]');
+    var declineBtn = bar.querySelector('[data-cookie-decline]');
+
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', function() {
+        try {
+          localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted');
+        } catch (e) {}
+        hideBar(bar);
+
+        // Fire optional analytics event
+        if (window.dataLayer) {
+          window.dataLayer.push({
+            event: 'announceflow_consent',
+            consent_type: 'accepted'
+          });
+        }
+      });
+    }
+
+    if (declineBtn) {
+      declineBtn.addEventListener('click', function() {
+        try {
+          localStorage.setItem(COOKIE_CONSENT_KEY, 'declined');
+        } catch (e) {}
+        hideBar(bar);
+
+        // Fire optional analytics event
+        if (window.dataLayer) {
+          window.dataLayer.push({
+            event: 'announceflow_consent',
+            consent_type: 'declined'
+          });
+        }
+      });
+    }
+  }
+
+  /**
+   * Initialize Free Shipping Progress bar
+   */
+  function initFreeShipping(bar) {
+    var threshold = parseFloat(bar.getAttribute('data-threshold')) || 50;
+    var currency = bar.getAttribute('data-currency') || 'USD';
+    var messageTemplate = bar.getAttribute('data-message-template') || 'Spend {remaining} more for FREE shipping!';
+    var successMessage = bar.getAttribute('data-success-message') || "You've unlocked FREE shipping!";
+    var showProgressBar = bar.getAttribute('data-show-progress-bar') !== 'false';
+
+    var messageEl = bar.querySelector('[data-shipping-message]');
+    var progressBar = bar.querySelector('[data-progress-bar]');
+    var progressText = bar.querySelector('[data-progress-text]');
+    var successEl = bar.querySelector('[data-shipping-success]');
+    var progressWrapper = bar.querySelector('.announceflow-shipping__progress-wrapper');
+
+    // Get cart total from Shopify's cart object
+    function updateShippingBar() {
+      // Try to get cart total from various sources
+      var cartTotal = 0;
+
+      // Method 1: Use Shopify's cart API (most reliable)
+      fetch('/cart.js')
+        .then(function(response) { return response.json(); })
+        .then(function(cart) {
+          cartTotal = cart.total_price / 100; // Convert from cents
+          updateDisplay(cartTotal);
+        })
+        .catch(function() {
+          // Fallback: try to read from page
+          updateDisplay(0);
+        });
+    }
+
+    function updateDisplay(cartTotal) {
+      var thresholdInCents = threshold;
+      var remaining = Math.max(0, thresholdInCents - cartTotal);
+      var percentage = Math.min(100, (cartTotal / thresholdInCents) * 100);
+
+      // Format currency
+      var formattedRemaining = formatCurrency(remaining, currency);
+      var formattedThreshold = formatCurrency(thresholdInCents, currency);
+
+      if (cartTotal >= thresholdInCents) {
+        // Threshold reached - show success
+        if (messageEl) messageEl.style.display = 'none';
+        if (progressWrapper) progressWrapper.style.display = 'none';
+        if (successEl) {
+          successEl.style.display = 'block';
+          successEl.textContent = successMessage;
+        }
+        bar.classList.add('announceflow-bar--shipping-success');
+      } else {
+        // Still need more - show progress
+        if (messageEl) {
+          messageEl.style.display = 'block';
+          messageEl.textContent = messageTemplate.replace('{remaining}', formattedRemaining).replace('{threshold}', formattedThreshold);
+        }
+        if (successEl) successEl.style.display = 'none';
+        bar.classList.remove('announceflow-bar--shipping-success');
+
+        // Update progress bar
+        if (showProgressBar) {
+          if (progressBar) progressBar.style.width = percentage + '%';
+          if (progressText) progressText.textContent = Math.round(percentage) + '%';
+        }
+      }
+    }
+
+    function formatCurrency(amount, currencyCode) {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency: currencyCode,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format(amount);
+      } catch (e) {
+        // Fallback formatting
+        var symbols = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
+        var symbol = symbols[currencyCode] || currencyCode + ' ';
+        return symbol + amount.toFixed(2);
+      }
+    }
+
+    // Initial update
+    updateShippingBar();
+
+    // Listen for cart changes (Shopify AJAX cart events)
+    document.addEventListener('cart:updated', updateShippingBar);
+
+    // Also poll periodically for cart changes (fallback)
+    setInterval(updateShippingBar, 5000);
   }
 
   // Initialize when DOM is ready
@@ -335,26 +747,18 @@
   }
 
   /**
-   * Public API - Available globally as window.AnnounceFlow
-   * Allows programmatic control of announcement bars
+   * Public API
    */
   window.AnnounceFlow = {
-    /**
-     * Programmatically dismiss a bar by ID
-     * @param {string} barId - The bar's unique identifier
-     */
     dismiss: function(barId) {
       var bar = document.querySelector('[data-bar-id="' + barId + '"]');
       if (bar) {
         var btn = bar.querySelector('[data-announceflow-dismiss]');
         if (btn) btn.click();
+        else hideBar(bar);
       }
     },
 
-    /**
-     * Re-show a previously dismissed bar
-     * @param {string} barId - The bar's unique identifier
-     */
     show: function(barId) {
       try {
         localStorage.removeItem(STORAGE_PREFIX + barId);
@@ -367,21 +771,11 @@
       }
     },
 
-    /**
-     * Check if a bar is currently visible
-     * @param {string} barId - The bar's unique identifier
-     * @returns {boolean}
-     */
     isVisible: function(barId) {
       var bar = document.querySelector('[data-bar-id="' + barId + '"]');
       return bar && bar.style.display !== 'none' && bar.classList.contains('announceflow-bar--visible');
     },
 
-    /**
-     * Get remaining time for a countdown bar in milliseconds
-     * @param {string} barId - The bar's unique identifier
-     * @returns {number|null} - Milliseconds remaining, 0 if expired, null if not a countdown
-     */
     getTimeRemaining: function(barId) {
       var bar = document.querySelector('[data-bar-id="' + barId + '"]');
       if (!bar) return null;
@@ -389,6 +783,27 @@
       if (!endDatetime) return null;
       var diff = new Date(endDatetime).getTime() - Date.now();
       return diff > 0 ? diff : 0;
+    },
+
+    getConsentStatus: function() {
+      try {
+        return localStorage.getItem(COOKIE_CONSENT_KEY);
+      } catch (e) {
+        return null;
+      }
+    },
+
+    resetConsent: function() {
+      try {
+        localStorage.removeItem(COOKIE_CONSENT_KEY);
+      } catch (e) {}
+    },
+
+    refreshShipping: function() {
+      var bars = document.querySelectorAll('[data-bar-type="free_shipping"]');
+      bars.forEach(function(bar) {
+        document.dispatchEvent(new CustomEvent('cart:updated'));
+      });
     }
   };
 })();

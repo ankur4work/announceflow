@@ -12,16 +12,36 @@ interface BarPreviewProps {
         ctaLink?: string;
         endDatetime?: string;
         expiredText?: string;
+        // Email capture fields
+        placeholder?: string;
+        buttonText?: string;
+        successMessage?: string;
+        // Cookie consent fields
+        acceptText?: string;
+        declineText?: string;
+        privacyLink?: string;
+        privacyText?: string;
+        // Free shipping fields
+        threshold?: number;
+        currency?: string;
+        messageTemplate?: string;
+        shippingSuccessMessage?: string;
     };
     style: {
         position: "top" | "bottom";
         bgColor: string;
         textColor: string;
         fontSize: "small" | "medium" | "large";
+        buttonBgColor?: string;
+        buttonTextColor?: string;
+        progressColor?: string;
+        progressBgColor?: string;
     };
     settings: {
         dismissible: boolean;
         hideWhenExpired?: boolean;
+        showDecline?: boolean;
+        showProgressBar?: boolean;
     };
     isPremium?: boolean;
 }
@@ -36,6 +56,13 @@ const getFontSizePx = (size: string): number => {
         default:
             return 16;
     }
+};
+
+// Format currency for preview
+const formatCurrencyPreview = (amount: number, currencyCode: string): string => {
+    const symbols: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", INR: "₹", CAD: "$", AUD: "$" };
+    const symbol = symbols[currencyCode] || currencyCode + " ";
+    return symbol + amount.toFixed(2);
 };
 
 // Countdown timer component
@@ -229,12 +256,42 @@ export function BarPreview({
                 );
 
             case "free_shipping":
+                const threshold = content.threshold || 50;
+                const currency = content.currency || "USD";
+                const demoCartAmount = threshold * 0.4; // Demo: 40% of threshold
+                const remaining = threshold - demoCartAmount;
+                const percentage = Math.min(100, (demoCartAmount / threshold) * 100);
+                const formattedRemaining = formatCurrencyPreview(remaining, currency);
+                const messageText = (content.messageTemplate || "Spend {remaining} more for FREE shipping!")
+                    .replace("{remaining}", formattedRemaining);
+
                 return (
                     <div style={baseStyle}>
-                        <span style={{ fontWeight: 500 }}>
-                            {content.text || "🚚 Free shipping on orders over $50!"}
-                        </span>
-                        {content.ctaText && <CTAButton content={content} style={style} />}
+                        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "16px", flexWrap: "wrap", justifyContent: "center" }}>
+                            <span style={{ fontWeight: 500 }}>
+                                {messageText}
+                            </span>
+                            {settings.showProgressBar !== false && (
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <div style={{
+                                        width: isMobile ? "100px" : "150px",
+                                        height: "8px",
+                                        backgroundColor: style.progressBgColor || "rgba(255,255,255,0.3)",
+                                        borderRadius: "4px",
+                                        overflow: "hidden",
+                                    }}>
+                                        <div style={{
+                                            width: `${percentage}%`,
+                                            height: "100%",
+                                            backgroundColor: style.progressColor || style.textColor,
+                                            borderRadius: "4px",
+                                            transition: "width 0.3s ease",
+                                        }} />
+                                    </div>
+                                    <span style={{ fontSize: "12px", fontWeight: 600 }}>{Math.round(percentage)}%</span>
+                                </div>
+                            )}
+                        </div>
                         {settings.dismissible && (
                             <span style={dismissButtonStyle}>✕</span>
                         )}
@@ -245,37 +302,43 @@ export function BarPreview({
                 return (
                     <div style={baseStyle}>
                         <span style={{ fontWeight: 500 }}>
-                            {content.text || "📧 Subscribe for 10% off your first order!"}
+                            {content.text || "Get 10% off your first order!"}
                         </span>
-                        <input
-                            type="email"
-                            placeholder="Enter email"
-                            disabled
-                            style={{
-                                padding: "6px 12px",
-                                borderRadius: "4px",
-                                border: "none",
-                                fontSize: "13px",
-                                backgroundColor: "rgba(255,255,255,0.9)",
-                                color: "#333",
-                                width: isMobile ? "140px" : "180px",
-                            }}
-                        />
-                        <button
-                            disabled
-                            style={{
-                                padding: "6px 12px",
-                                borderRadius: "4px",
-                                border: "none",
-                                backgroundColor: style.textColor,
-                                color: style.bgColor,
-                                fontWeight: 600,
-                                fontSize: "13px",
-                                cursor: "default",
-                            }}
-                        >
-                            Subscribe
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: isMobile ? "wrap" : "nowrap", justifyContent: "center" }}>
+                            <input
+                                type="email"
+                                placeholder={content.placeholder || "Enter your email"}
+                                disabled
+                                style={{
+                                    padding: "8px 12px",
+                                    borderRadius: "4px",
+                                    border: "none",
+                                    fontSize: "13px",
+                                    backgroundColor: "rgba(255,255,255,0.95)",
+                                    color: "#333",
+                                    width: isMobile ? "100%" : "180px",
+                                    maxWidth: isMobile ? "200px" : "none",
+                                    minHeight: "36px",
+                                }}
+                            />
+                            <button
+                                disabled
+                                style={{
+                                    padding: "8px 16px",
+                                    borderRadius: "4px",
+                                    border: "none",
+                                    backgroundColor: style.buttonBgColor || style.textColor,
+                                    color: style.buttonTextColor || style.bgColor,
+                                    fontWeight: 600,
+                                    fontSize: "13px",
+                                    cursor: "default",
+                                    minHeight: "36px",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {content.buttonText || "Subscribe"}
+                            </button>
+                        </div>
                         {settings.dismissible && (
                             <span style={dismissButtonStyle}>✕</span>
                         )}
@@ -285,39 +348,59 @@ export function BarPreview({
             case "cookie_consent":
                 return (
                     <div style={baseStyle}>
-                        <span style={{ fontWeight: 500 }}>
-                            {content.text || "🍪 We use cookies to improve your experience."}
-                        </span>
-                        <button
-                            disabled
-                            style={{
-                                padding: "6px 12px",
-                                borderRadius: "4px",
-                                border: "none",
-                                backgroundColor: style.textColor,
-                                color: style.bgColor,
-                                fontWeight: 600,
-                                fontSize: "13px",
-                                cursor: "default",
-                            }}
-                        >
-                            Accept
-                        </button>
-                        <button
-                            disabled
-                            style={{
-                                padding: "6px 12px",
-                                borderRadius: "4px",
-                                border: `1px solid ${style.textColor}`,
-                                backgroundColor: "transparent",
-                                color: style.textColor,
-                                fontWeight: 500,
-                                fontSize: "13px",
-                                cursor: "default",
-                            }}
-                        >
-                            Decline
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                            <span style={{ fontWeight: 500 }}>
+                                {content.text || "We use cookies to improve your experience."}
+                            </span>
+                            {content.privacyLink && content.privacyText && (
+                                <span
+                                    style={{
+                                        textDecoration: "underline",
+                                        opacity: 0.85,
+                                        fontSize: `${fontSize - 2}px`,
+                                        cursor: "default",
+                                    }}
+                                >
+                                    {content.privacyText || "Privacy Policy"}
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <button
+                                disabled
+                                style={{
+                                    padding: "6px 14px",
+                                    borderRadius: "4px",
+                                    border: "none",
+                                    backgroundColor: style.buttonBgColor || style.textColor,
+                                    color: style.buttonTextColor || style.bgColor,
+                                    fontWeight: 600,
+                                    fontSize: "13px",
+                                    cursor: "default",
+                                    minHeight: "32px",
+                                }}
+                            >
+                                {content.acceptText || "Accept"}
+                            </button>
+                            {settings.showDecline !== false && (
+                                <button
+                                    disabled
+                                    style={{
+                                        padding: "6px 14px",
+                                        borderRadius: "4px",
+                                        border: `1px solid ${style.buttonBgColor || style.textColor}`,
+                                        backgroundColor: "transparent",
+                                        color: style.buttonBgColor || style.textColor,
+                                        fontWeight: 500,
+                                        fontSize: "13px",
+                                        cursor: "default",
+                                        minHeight: "32px",
+                                    }}
+                                >
+                                    {content.declineText || "Decline"}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 );
 

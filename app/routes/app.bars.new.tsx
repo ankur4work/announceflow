@@ -42,15 +42,42 @@ interface FormData {
     bgColor: string;
     textColor: string;
     fontSize: FontSize;
+    buttonBgColor: string;
+    buttonTextColor: string;
+    progressColor: string;
+    progressBgColor: string;
   };
   settings: {
     enabled: boolean;
     dismissible: boolean;
     hideWhenExpired: boolean;
+    showDecline: boolean;
+    showProgressBar: boolean;
   };
   extra: {
     endDatetime: string;
     expiredText: string;
+  };
+  // Email Capture fields
+  email: {
+    placeholder: string;
+    buttonText: string;
+    successMessage: string;
+    errorMessage: string;
+  };
+  // Cookie Consent fields
+  cookie: {
+    acceptText: string;
+    declineText: string;
+    privacyLink: string;
+    privacyText: string;
+  };
+  // Free Shipping fields
+  shipping: {
+    threshold: string;
+    currency: string;
+    messageTemplate: string;
+    successMessage: string;
   };
 }
 
@@ -78,15 +105,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const bgColor = formData.get("bgColor") as string;
   const textColor = formData.get("textColor") as string;
   const fontSize = formData.get("fontSize") as FontSize;
+  const buttonBgColor = formData.get("buttonBgColor") as string;
+  const buttonTextColor = formData.get("buttonTextColor") as string;
+  const progressColor = formData.get("progressColor") as string;
+  const progressBgColor = formData.get("progressBgColor") as string;
   const enabled = formData.get("enabled") === "true";
   const dismissible = formData.get("dismissible") === "true";
 
+  // Countdown fields
   const endDatetime = formData.get("endDatetime") as string;
   const expiredText = formData.get("expiredText") as string;
   const hideWhenExpired = formData.get("hideWhenExpired") === "true";
 
+  // Email Capture fields
+  const emailPlaceholder = formData.get("emailPlaceholder") as string;
+  const emailButtonText = formData.get("emailButtonText") as string;
+  const emailSuccessMessage = formData.get("emailSuccessMessage") as string;
+  const emailErrorMessage = formData.get("emailErrorMessage") as string;
+
+  // Cookie Consent fields
+  const acceptText = formData.get("acceptText") as string;
+  const declineText = formData.get("declineText") as string;
+  const privacyLink = formData.get("privacyLink") as string;
+  const privacyText = formData.get("privacyText") as string;
+  const showDecline = formData.get("showDecline") === "true";
+
+  // Free Shipping fields
+  const shippingThreshold = formData.get("shippingThreshold") as string;
+  const shippingCurrency = formData.get("shippingCurrency") as string;
+  const shippingMessageTemplate = formData.get("shippingMessageTemplate") as string;
+  const shippingSuccessMessage = formData.get("shippingSuccessMessage") as string;
+  const showProgressBar = formData.get("showProgressBar") === "true";
+
   // Validation
-  if (!text || !text.trim()) {
+  if (type !== "cookie_consent" && type !== "free_shipping" && (!text || !text.trim())) {
     return json({ success: false, error: "Announcement text is required" }, { status: 400 });
   }
 
@@ -94,37 +146,107 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!endDatetime) {
       return json({ success: false, error: "End date is required for countdown" }, { status: 400 });
     }
-    // Check if date is valid
     if (isNaN(new Date(endDatetime).getTime())) {
       return json({ success: false, error: "Invalid end date" }, { status: 400 });
     }
   }
 
+  if (type === "email_signup" && (!text || !text.trim())) {
+    return json({ success: false, error: "Headline text is required for Email Capture" }, { status: 400 });
+  }
+
+  if (type === "cookie_consent" && (!privacyLink || !privacyLink.trim())) {
+    return json({ success: false, error: "Privacy policy URL is required" }, { status: 400 });
+  }
+
+  if (type === "free_shipping") {
+    const threshold = parseFloat(shippingThreshold);
+    if (isNaN(threshold) || threshold <= 0) {
+      return json({ success: false, error: "Shipping threshold must be a positive number" }, { status: 400 });
+    }
+  }
+
   // Generate a name from the text
-  const name = text.length > 30 ? text.substring(0, 30) + "..." : text;
+  const displayText = text || (type === "cookie_consent" ? "Cookie Consent" : type === "free_shipping" ? "Free Shipping Bar" : "New Bar");
+  const name = displayText.length > 30 ? displayText.substring(0, 30) + "..." : displayText;
+
+  // Build content based on bar type
+  const content: Record<string, unknown> = { text };
+
+  if (type === "promotional" || type === "announcement") {
+    if (ctaText) content.cta_text = ctaText;
+    if (ctaLink) content.cta_link = ctaLink;
+    content.cta_style = "primary" as CTAStyle;
+  }
+
+  if (type === "countdown") {
+    content.end_datetime = endDatetime;
+    content.expired_text = expiredText || "This offer has ended";
+  }
+
+  if (type === "email_signup") {
+    content.placeholder = emailPlaceholder || "Enter your email";
+    content.button_text = emailButtonText || "Subscribe";
+    content.success_message = emailSuccessMessage || "Thanks! Check your inbox.";
+    content.error_message = emailErrorMessage || "Please enter a valid email";
+  }
+
+  if (type === "cookie_consent") {
+    content.accept_text = acceptText || "Accept";
+    content.decline_text = declineText || "Decline";
+    content.privacy_link = privacyLink;
+    content.privacy_text = privacyText || "Learn more";
+  }
+
+  if (type === "free_shipping") {
+    content.threshold = parseFloat(shippingThreshold) || 50;
+    content.currency = shippingCurrency || "USD";
+    content.message_template = shippingMessageTemplate || "Spend {remaining} more for FREE shipping!";
+    content.success_message = shippingSuccessMessage || "You've unlocked FREE shipping!";
+  }
+
+  // Build style
+  const style: Record<string, unknown> = {
+    position,
+    bg_color: bgColor,
+    text_color: textColor,
+    font_size: fontSize,
+  };
+
+  if (type === "email_signup" || type === "cookie_consent") {
+    style.button_bg_color = buttonBgColor;
+    style.button_text_color = buttonTextColor;
+  }
+
+  if (type === "free_shipping") {
+    style.progress_color = progressColor;
+    style.progress_bg_color = progressBgColor;
+  }
+
+  // Build settings
+  const settings: Record<string, unknown> = {
+    dismissible: type !== "cookie_consent" ? dismissible : false,
+  };
+
+  if (type === "countdown") {
+    settings.hide_when_expired = hideWhenExpired;
+  }
+
+  if (type === "cookie_consent") {
+    settings.show_decline = showDecline;
+  }
+
+  if (type === "free_shipping") {
+    settings.show_progress_bar = showProgressBar;
+  }
 
   const result = await createBar(admin, {
     name,
     type,
     enabled,
-    content: {
-      text,
-      cta_text: type !== "countdown" ? (ctaText || undefined) : undefined,
-      cta_link: type !== "countdown" ? (ctaLink || undefined) : undefined,
-      cta_style: type !== "countdown" ? ("primary" as CTAStyle) : undefined,
-      end_datetime: type === "countdown" ? endDatetime : undefined,
-      expired_text: type === "countdown" ? (expiredText || "This offer has ended") : undefined,
-    },
-    style: {
-      position,
-      bg_color: bgColor,
-      text_color: textColor,
-      font_size: fontSize,
-    },
-    settings: {
-      dismissible,
-      hide_when_expired: type === "countdown" ? hideWhenExpired : undefined,
-    },
+    content: content as any,
+    style: style as any,
+    settings: settings as any,
   });
 
   if (result.success) {
@@ -185,15 +307,39 @@ export default function CreateBar() {
       bgColor: "#1E3A5F",
       textColor: "#FFFFFF",
       fontSize: "medium",
+      buttonBgColor: "#E74C3C",
+      buttonTextColor: "#FFFFFF",
+      progressColor: "#FFFFFF",
+      progressBgColor: "rgba(255,255,255,0.3)",
     },
     settings: {
       enabled: true,
       dismissible: true,
       hideWhenExpired: false,
+      showDecline: true,
+      showProgressBar: true,
     },
     extra: {
       endDatetime: "",
       expiredText: "This offer has ended",
+    },
+    email: {
+      placeholder: "Enter your email",
+      buttonText: "Subscribe",
+      successMessage: "Thanks! Check your inbox.",
+      errorMessage: "Please enter a valid email",
+    },
+    cookie: {
+      acceptText: "Accept",
+      declineText: "Decline",
+      privacyLink: "/pages/privacy-policy",
+      privacyText: "Learn more",
+    },
+    shipping: {
+      threshold: "50",
+      currency: "USD",
+      messageTemplate: "Spend {remaining} more for FREE shipping!",
+      successMessage: "You've unlocked FREE shipping!",
     },
   });
 
@@ -247,6 +393,9 @@ export default function CreateBar() {
   const updateStyle = (field: keyof FormData['style'], value: any) => updateField("style", field, value);
   const updateSettings = (field: keyof FormData['settings'], value: boolean) => updateField("settings", field, value);
   const updateExtra = (field: keyof FormData['extra'], value: string) => updateField("extra", field, value);
+  const updateEmail = (field: keyof FormData['email'], value: string) => updateField("email", field, value);
+  const updateCookie = (field: keyof FormData['cookie'], value: string) => updateField("cookie", field, value);
+  const updateShipping = (field: keyof FormData['shipping'], value: string) => updateField("shipping", field, value);
 
   // Validate form
   const validateForm = useCallback((): boolean => {
@@ -275,8 +424,6 @@ export default function CreateBar() {
       return;
     }
 
-
-
     setIsDirty(false);
     const submitData = new FormData();
     submitData.append("type", formData.type);
@@ -287,11 +434,32 @@ export default function CreateBar() {
     submitData.append("bgColor", formData.style.bgColor);
     submitData.append("textColor", formData.style.textColor);
     submitData.append("fontSize", formData.style.fontSize);
+    submitData.append("buttonBgColor", formData.style.buttonBgColor);
+    submitData.append("buttonTextColor", formData.style.buttonTextColor);
+    submitData.append("progressColor", formData.style.progressColor);
+    submitData.append("progressBgColor", formData.style.progressBgColor);
     submitData.append("enabled", String(formData.settings.enabled));
     submitData.append("dismissible", String(formData.settings.dismissible));
     submitData.append("hideWhenExpired", String(formData.settings.hideWhenExpired));
+    submitData.append("showDecline", String(formData.settings.showDecline));
+    submitData.append("showProgressBar", String(formData.settings.showProgressBar));
     submitData.append("endDatetime", formData.extra.endDatetime);
     submitData.append("expiredText", formData.extra.expiredText);
+    // Email fields
+    submitData.append("emailPlaceholder", formData.email.placeholder);
+    submitData.append("emailButtonText", formData.email.buttonText);
+    submitData.append("emailSuccessMessage", formData.email.successMessage);
+    submitData.append("emailErrorMessage", formData.email.errorMessage);
+    // Cookie fields
+    submitData.append("acceptText", formData.cookie.acceptText);
+    submitData.append("declineText", formData.cookie.declineText);
+    submitData.append("privacyLink", formData.cookie.privacyLink);
+    submitData.append("privacyText", formData.cookie.privacyText);
+    // Shipping fields
+    submitData.append("shippingThreshold", formData.shipping.threshold);
+    submitData.append("shippingCurrency", formData.shipping.currency);
+    submitData.append("shippingMessageTemplate", formData.shipping.messageTemplate);
+    submitData.append("shippingSuccessMessage", formData.shipping.successMessage);
 
     submit(submitData, { method: "post" });
   }, [formData, validateForm, submit, shopify]);
@@ -374,62 +542,230 @@ export default function CreateBar() {
                     Content
                   </Text>
                   <FormLayout>
-                    <TextField
-                      label="Announcement Text"
-                      value={formData.content.text}
-                      onChange={(value) => updateContent("text", value)}
-                      placeholder={formData.type === "countdown" ? "Sale ends in:" : "🎉 Free shipping on orders over $50!"}
-                      multiline={2}
-                      maxLength={150}
-                      showCharacterCount
-                      autoComplete="off"
-                      error={errors.text}
-                      requiredIndicator
-                      helpText="This is the main message visitors will see"
-                    />
-
-                    {formData.type !== "countdown" && (
-                      <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                    {/* PROMOTIONAL / ANNOUNCEMENT */}
+                    {(formData.type === "promotional" || formData.type === "announcement") && (
+                      <>
                         <TextField
-                          label="Button Text"
-                          value={formData.content.ctaText}
-                          onChange={(value) => updateContent("ctaText", value)}
-                          placeholder="Shop Now"
+                          label="Announcement Text"
+                          value={formData.content.text}
+                          onChange={(value) => updateContent("text", value)}
+                          placeholder="🎉 Free shipping on orders over $50!"
+                          multiline={2}
+                          maxLength={150}
+                          showCharacterCount
                           autoComplete="off"
-                          helpText="Optional call-to-action button"
+                          error={errors.text}
+                          requiredIndicator
+                          helpText="This is the main message visitors will see"
                         />
-                        <TextField
-                          label="Button Link"
-                          value={formData.content.ctaLink}
-                          onChange={(value) => updateContent("ctaLink", value)}
-                          placeholder="/collections/sale or https://..."
-                          autoComplete="off"
-                          error={errors.ctaLink}
-                          helpText="Where the button links to"
-                        />
-                      </InlineGrid>
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="Button Text"
+                            value={formData.content.ctaText}
+                            onChange={(value) => updateContent("ctaText", value)}
+                            placeholder="Shop Now"
+                            autoComplete="off"
+                            helpText="Optional call-to-action button"
+                          />
+                          <TextField
+                            label="Button Link"
+                            value={formData.content.ctaLink}
+                            onChange={(value) => updateContent("ctaLink", value)}
+                            placeholder="/collections/sale or https://..."
+                            autoComplete="off"
+                            error={errors.ctaLink}
+                            helpText="Where the button links to"
+                          />
+                        </InlineGrid>
+                      </>
                     )}
 
+                    {/* COUNTDOWN */}
                     {formData.type === "countdown" && (
-                      <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                      <>
                         <TextField
-                          label="End Date & Time"
-                          type="datetime-local"
-                          value={formData.extra.endDatetime}
-                          onChange={(value) => updateExtra("endDatetime", value)}
+                          label="Announcement Text"
+                          value={formData.content.text}
+                          onChange={(value) => updateContent("text", value)}
+                          placeholder="Sale ends in:"
+                          multiline={2}
+                          maxLength={150}
+                          showCharacterCount
                           autoComplete="off"
-                          error={errors.endDatetime}
+                          error={errors.text}
                           requiredIndicator
+                          helpText="This is the main message visitors will see"
+                        />
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="End Date & Time"
+                            type="datetime-local"
+                            value={formData.extra.endDatetime}
+                            onChange={(value) => updateExtra("endDatetime", value)}
+                            autoComplete="off"
+                            error={errors.endDatetime}
+                            requiredIndicator
+                          />
+                          <TextField
+                            label="Expired Message"
+                            value={formData.extra.expiredText}
+                            onChange={(value) => updateExtra("expiredText", value)}
+                            placeholder="This offer has ended"
+                            autoComplete="off"
+                            helpText="Shown when countdown reaches zero"
+                          />
+                        </InlineGrid>
+                      </>
+                    )}
+
+                    {/* EMAIL CAPTURE */}
+                    {formData.type === "email_signup" && (
+                      <>
+                        <TextField
+                          label="Headline Text"
+                          value={formData.content.text}
+                          onChange={(value) => updateContent("text", value)}
+                          placeholder="Get 10% off your first order!"
+                          maxLength={100}
+                          showCharacterCount
+                          autoComplete="off"
+                          error={errors.text}
+                          requiredIndicator
+                          helpText="Main headline to encourage signups"
+                        />
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="Input Placeholder"
+                            value={formData.email.placeholder}
+                            onChange={(value) => updateEmail("placeholder", value)}
+                            placeholder="Enter your email"
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Button Text"
+                            value={formData.email.buttonText}
+                            onChange={(value) => updateEmail("buttonText", value)}
+                            placeholder="Subscribe"
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="Success Message"
+                            value={formData.email.successMessage}
+                            onChange={(value) => updateEmail("successMessage", value)}
+                            placeholder="Thanks! Check your inbox."
+                            autoComplete="off"
+                            helpText="Shown after successful submission"
+                          />
+                          <TextField
+                            label="Error Message"
+                            value={formData.email.errorMessage}
+                            onChange={(value) => updateEmail("errorMessage", value)}
+                            placeholder="Please enter a valid email"
+                            autoComplete="off"
+                            helpText="Shown for invalid email"
+                          />
+                        </InlineGrid>
+                      </>
+                    )}
+
+                    {/* COOKIE CONSENT */}
+                    {formData.type === "cookie_consent" && (
+                      <>
+                        <TextField
+                          label="Consent Message"
+                          value={formData.content.text}
+                          onChange={(value) => updateContent("text", value)}
+                          placeholder="We use cookies to improve your experience."
+                          multiline={2}
+                          maxLength={200}
+                          showCharacterCount
+                          autoComplete="off"
+                          helpText="Main consent message"
+                        />
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="Accept Button Text"
+                            value={formData.cookie.acceptText}
+                            onChange={(value) => updateCookie("acceptText", value)}
+                            placeholder="Accept"
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Decline Button Text"
+                            value={formData.cookie.declineText}
+                            onChange={(value) => updateCookie("declineText", value)}
+                            placeholder="Decline"
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="Privacy Policy URL"
+                            value={formData.cookie.privacyLink}
+                            onChange={(value) => updateCookie("privacyLink", value)}
+                            placeholder="/pages/privacy-policy"
+                            autoComplete="off"
+                            requiredIndicator
+                            helpText="Link to your privacy policy"
+                          />
+                          <TextField
+                            label="Privacy Link Text"
+                            value={formData.cookie.privacyText}
+                            onChange={(value) => updateCookie("privacyText", value)}
+                            placeholder="Learn more"
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                      </>
+                    )}
+
+                    {/* FREE SHIPPING */}
+                    {formData.type === "free_shipping" && (
+                      <>
+                        <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                          <TextField
+                            label="Shipping Threshold"
+                            type="number"
+                            value={formData.shipping.threshold}
+                            onChange={(value) => updateShipping("threshold", value)}
+                            placeholder="50"
+                            autoComplete="off"
+                            requiredIndicator
+                            helpText="Order amount for free shipping"
+                          />
+                          <Select
+                            label="Currency"
+                            options={[
+                              { label: "USD ($)", value: "USD" },
+                              { label: "EUR (€)", value: "EUR" },
+                              { label: "GBP (£)", value: "GBP" },
+                              { label: "INR (₹)", value: "INR" },
+                              { label: "CAD ($)", value: "CAD" },
+                              { label: "AUD ($)", value: "AUD" },
+                            ]}
+                            value={formData.shipping.currency}
+                            onChange={(value) => updateShipping("currency", value)}
+                          />
+                        </InlineGrid>
+                        <TextField
+                          label="Progress Message"
+                          value={formData.shipping.messageTemplate}
+                          onChange={(value) => updateShipping("messageTemplate", value)}
+                          placeholder="Spend {remaining} more for FREE shipping!"
+                          autoComplete="off"
+                          helpText="Use {remaining} for the remaining amount"
                         />
                         <TextField
-                          label="Expired Message"
-                          value={formData.extra.expiredText}
-                          onChange={(value) => updateExtra("expiredText", value)}
-                          placeholder="This offer has ended"
+                          label="Success Message"
+                          value={formData.shipping.successMessage}
+                          onChange={(value) => updateShipping("successMessage", value)}
+                          placeholder="You've unlocked FREE shipping!"
                           autoComplete="off"
-                          helpText="Shown when countdown reaches zero"
+                          helpText="Shown when threshold is reached"
                         />
-                      </InlineGrid>
+                      </>
                     )}
                   </FormLayout>
                 </BlockStack>
@@ -462,7 +798,7 @@ export default function CreateBar() {
                         </Button>
                       </ButtonGroup>
                       <Text as="span" variant="bodySm" tone="subdued">
-                        Where the bar appears on your store
+                        {formData.type === "cookie_consent" ? "Recommended: Bottom for cookie consent" : "Where the bar appears on your store"}
                       </Text>
                     </BlockStack>
 
@@ -481,6 +817,42 @@ export default function CreateBar() {
                         helpText="Should contrast with background"
                       />
                     </InlineGrid>
+
+                    {/* Button Colors - for email capture and cookie consent */}
+                    {(formData.type === "email_signup" || formData.type === "cookie_consent") && (
+                      <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                        <ColorPicker
+                          label="Button Background"
+                          value={formData.style.buttonBgColor}
+                          onChange={(color) => updateField("style", "buttonBgColor", color)}
+                          helpText="Primary button background color"
+                        />
+                        <ColorPicker
+                          label="Button Text Color"
+                          value={formData.style.buttonTextColor}
+                          onChange={(color) => updateField("style", "buttonTextColor", color)}
+                          helpText="Primary button text color"
+                        />
+                      </InlineGrid>
+                    )}
+
+                    {/* Progress Bar Colors - for free shipping */}
+                    {formData.type === "free_shipping" && (
+                      <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                        <ColorPicker
+                          label="Progress Bar Color"
+                          value={formData.style.progressColor}
+                          onChange={(color) => updateField("style", "progressColor", color)}
+                          helpText="Filled progress bar color"
+                        />
+                        <ColorPicker
+                          label="Progress Bar Background"
+                          value={formData.style.progressBgColor}
+                          onChange={(color) => updateField("style", "progressBgColor", color)}
+                          helpText="Empty progress bar background"
+                        />
+                      </InlineGrid>
+                    )}
 
                     {/* Font Size */}
                     <FontSizeSelector
@@ -504,18 +876,36 @@ export default function CreateBar() {
                       checked={formData.settings.enabled}
                       onChange={(checked) => updateField("settings", "enabled", checked)}
                     />
-                    <Checkbox
-                      label="Allow visitors to dismiss"
-                      helpText="Shows an X button so visitors can close the bar"
-                      checked={formData.settings.dismissible}
-                      onChange={(checked) => updateSettings("dismissible", checked)}
-                    />
+                    {formData.type !== "cookie_consent" && (
+                      <Checkbox
+                        label="Allow visitors to dismiss"
+                        helpText="Shows an X button so visitors can close the bar"
+                        checked={formData.settings.dismissible}
+                        onChange={(checked) => updateSettings("dismissible", checked)}
+                      />
+                    )}
                     {formData.type === "countdown" && (
                       <Checkbox
                         label="Hide bar when expired"
                         helpText="If checked, the bar will disappear instead of showing the expired message"
                         checked={formData.settings.hideWhenExpired}
                         onChange={(checked) => updateSettings("hideWhenExpired", checked)}
+                      />
+                    )}
+                    {formData.type === "cookie_consent" && (
+                      <Checkbox
+                        label="Show decline button"
+                        helpText="If unchecked, only the Accept button will be shown"
+                        checked={formData.settings.showDecline}
+                        onChange={(checked) => updateSettings("showDecline", checked)}
+                      />
+                    )}
+                    {formData.type === "free_shipping" && (
+                      <Checkbox
+                        label="Show progress bar"
+                        helpText="Visual progress bar showing how close to free shipping"
+                        checked={formData.settings.showProgressBar}
+                        onChange={(checked) => updateSettings("showProgressBar", checked)}
                       />
                     )}
                   </BlockStack>
@@ -535,16 +925,36 @@ export default function CreateBar() {
                   ctaLink: formData.content.ctaLink,
                   endDatetime: formData.extra.endDatetime,
                   expiredText: formData.extra.expiredText,
+                  // Email fields
+                  placeholder: formData.email.placeholder,
+                  buttonText: formData.email.buttonText,
+                  successMessage: formData.email.successMessage,
+                  // Cookie fields
+                  acceptText: formData.cookie.acceptText,
+                  declineText: formData.cookie.declineText,
+                  privacyLink: formData.cookie.privacyLink,
+                  privacyText: formData.cookie.privacyText,
+                  // Shipping fields
+                  threshold: parseFloat(formData.shipping.threshold) || 50,
+                  currency: formData.shipping.currency,
+                  messageTemplate: formData.shipping.messageTemplate,
+                  shippingSuccessMessage: formData.shipping.successMessage,
                 }}
                 style={{
                   position: formData.style.position,
                   bgColor: formData.style.bgColor,
                   textColor: formData.style.textColor,
                   fontSize: formData.style.fontSize,
+                  buttonBgColor: formData.style.buttonBgColor,
+                  buttonTextColor: formData.style.buttonTextColor,
+                  progressColor: formData.style.progressColor,
+                  progressBgColor: formData.style.progressBgColor,
                 }}
                 settings={{
                   dismissible: formData.settings.dismissible,
                   hideWhenExpired: formData.settings.hideWhenExpired,
+                  showDecline: formData.settings.showDecline,
+                  showProgressBar: formData.settings.showProgressBar,
                 }}
               />
 

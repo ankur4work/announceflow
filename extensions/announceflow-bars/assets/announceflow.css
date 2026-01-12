@@ -459,3 +459,306 @@
 .announceflow-bar--countdown.announceflow-bar--urgent .announceflow-countdown__value {
   animation: announceflow-pulse 1s ease-in-out infinite;
 }
+
+/* =============================================
+   Email Capture Bar Styles
+   ============================================= */
+
+.announceflow-bar--email_signup .announceflow-bar__content {
+  gap: 16px;
+}
+
+.announceflow-email-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.announceflow-email-form__inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.announceflow-email-form__input {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: calc(var(--af-font-size) - 1px);
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #333;
+  width: 200px;
+  min-height: 38px;
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.announceflow-email-form__input:focus {
+  box-shadow: 0 0 0 2px var(--af-text);
+}
+
+.announceflow-email-form__input::placeholder {
+  color: #999;
+}
+
+.announceflow-email-form__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 4px;
+  font-size: calc(var(--af-font-size) - 1px);
+  font-weight: 600;
+  background-color: var(--af-btn-bg);
+  color: var(--af-btn-text);
+  cursor: pointer;
+  min-height: 38px;
+  min-width: 90px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.announceflow-email-form__button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.announceflow-email-form__button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.announceflow-email-form__spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.announceflow-email-form__message {
+  font-size: calc(var(--af-font-size) - 2px);
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.announceflow-email-form__message--success {
+  background-color: rgba(39, 174, 96, 0.2);
+  color: #27AE60;
+}
+
+.announceflow-email-form__message--error {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #E74C3C;
+}
+
+/* Email form mobile styles */
+@media screen and (max-width: 576px) {
+  .announceflow-email-form__inputs {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .announceflow-email-form__input {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .announceflow-email-form__button {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+/* =============================================
+   Cookie Consent Bar Styles
+   ============================================= */
+
+.announceflow-bar--cookie_consent {
+  transform: translateY(100%);
+}
+
+.announceflow-bar--cookie_consent.announceflow-bar--visible {
+  transform: translateY(0);
+}
+
+.announceflow-bar--cookie_consent .announceflow-bar__content {
+  gap: 16px;
+}
+
+.announceflow-cookie__buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.announceflow-cookie__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-size: calc(var(--af-font-size) - 1px);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 38px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.announceflow-cookie__btn:hover {
+  transform: translateY(-1px);
+}
+
+.announceflow-cookie__btn--accept {
+  background-color: var(--af-btn-bg);
+  color: var(--af-btn-text);
+  border: none;
+}
+
+.announceflow-cookie__btn--accept:hover {
+  opacity: 0.9;
+}
+
+.announceflow-cookie__btn--decline {
+  background-color: transparent;
+  color: var(--af-text);
+  border: 1px solid currentColor;
+}
+
+.announceflow-cookie__btn--decline:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.announceflow-cookie__privacy-link {
+  color: var(--af-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: calc(var(--af-font-size) - 2px);
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.announceflow-cookie__privacy-link:hover {
+  opacity: 1;
+}
+
+/* Cookie consent mobile styles */
+@media screen and (max-width: 576px) {
+  .announceflow-bar--cookie_consent .announceflow-bar__content {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .announceflow-cookie__buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .announceflow-cookie__btn {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .announceflow-cookie__privacy-link {
+    margin-top: 4px;
+  }
+}
+
+/* =============================================
+   Free Shipping Bar Styles
+   ============================================= */
+
+.announceflow-bar--free_shipping .announceflow-bar__content {
+  gap: 16px;
+}
+
+.announceflow-shipping {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.announceflow-shipping__message {
+  margin: 0;
+  font-weight: 500;
+}
+
+.announceflow-shipping__progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.announceflow-shipping__progress {
+  width: 150px;
+  height: 8px;
+  background-color: var(--af-progress-bg, rgba(255, 255, 255, 0.3));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.announceflow-shipping__progress-bar {
+  height: 100%;
+  background-color: var(--af-progress-color, var(--af-text));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.announceflow-shipping__progress-text {
+  font-size: calc(var(--af-font-size) - 2px);
+  font-weight: 600;
+  min-width: 35px;
+  text-align: right;
+}
+
+.announceflow-shipping__success {
+  margin: 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.announceflow-shipping__success::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+}
+
+.announceflow-bar--shipping-success {
+  background-color: #27AE60 !important;
+}
+
+/* Free shipping mobile styles */
+@media screen and (max-width: 576px) {
+  .announceflow-shipping {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .announceflow-shipping__progress-wrapper {
+    width: 100%;
+    max-width: 250px;
+  }
+
+  .announceflow-shipping__progress {
+    flex: 1;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .announceflow-shipping__progress {
+    width: 100px;
+  }
+}

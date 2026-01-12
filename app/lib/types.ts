@@ -33,6 +33,20 @@ export interface BarContent {
   // Countdown specific fields
   end_datetime?: string; // ISO datetime for countdown end
   expired_text?: string; // Message when countdown ends
+  // Email Capture specific fields
+  placeholder?: string; // Input placeholder text
+  button_text?: string; // Subscribe button text
+  success_message?: string; // Message after successful submission
+  error_message?: string; // Error message for invalid email
+  // Cookie Consent specific fields
+  accept_text?: string; // Accept button text
+  decline_text?: string; // Decline button text
+  privacy_link?: string; // Privacy policy URL
+  privacy_text?: string; // Privacy link text
+  // Free Shipping specific fields
+  threshold?: number; // Free shipping threshold amount
+  currency?: string; // Currency code (USD, EUR, INR, etc.)
+  message_template?: string; // Template with {remaining} placeholder
 }
 
 /**
@@ -45,6 +59,12 @@ export interface BarStyle {
   font_size: FontSize;
   padding_vertical?: number;
   sticky?: boolean;
+  // Button styling (for email capture, cookie consent)
+  button_bg_color?: string;
+  button_text_color?: string;
+  // Progress bar styling (for free shipping)
+  progress_color?: string;
+  progress_bg_color?: string;
 }
 
 /**
@@ -56,6 +76,8 @@ export interface BarSettings {
   show_on_desktop?: boolean;
   cookie_duration?: number; // hours
   hide_when_expired?: boolean; // For countdown bars
+  show_decline?: boolean; // For cookie consent - show decline button
+  show_progress_bar?: boolean; // For free shipping - show visual progress
 }
 
 /**
