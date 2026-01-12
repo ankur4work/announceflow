@@ -9,6 +9,7 @@ import { authenticate } from "../shopify.server";
 import { getActiveSubscription } from "../lib/billing.server";
 import { updateShopPlan, getShopByDomain } from "../lib/db.server";
 import { normalizeShopDomain } from "../lib/auth.server";
+import { onPlanUpgrade } from "../lib/metafields.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
@@ -58,13 +59,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
             // Update plan if subscription is active/pending, OR if we have a charge_id (user approved)
             if (activeSub && (activeSub.status === "ACTIVE" || activeSub.status === "PENDING")) {
+                const wasFree = shop.plan === "FREE";
                 await updateShopPlan(normalizedShop, "PREMIUM");
                 console.log(`Successfully updated shop ${normalizedShop} to PREMIUM plan (subscription verified)`);
+                
+                // Handle plan upgrade: update branding settings
+                if (wasFree) {
+                    await onPlanUpgrade(normalizedShop, admin);
+                }
+                
                 return redirect("/app?billing=success");
             } else if (chargeId) {
                 // User approved but subscription not immediately visible - update anyway
+                const wasFree = shop.plan === "FREE";
                 await updateShopPlan(normalizedShop, "PREMIUM");
                 console.log(`Updated shop ${normalizedShop} to PREMIUM plan (charge_id present: ${chargeId})`);
+                
+                // Handle plan upgrade: update branding settings
+                if (wasFree) {
+                    await onPlanUpgrade(normalizedShop, admin);
+                }
+                
                 return redirect("/app?billing=success");
             } else {
                 // No charge_id and no subscription - might be a direct visit, check current plan
@@ -74,8 +89,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
                 // If we have hmac, it's a valid Shopify redirect, so update anyway
                 if (hmac) {
+                    const wasFree = shop.plan === "FREE";
                     await updateShopPlan(normalizedShop, "PREMIUM");
                     console.log(`Updated shop ${normalizedShop} to PREMIUM plan (hmac present)`);
+                    
+                    // Handle plan upgrade: update branding settings
+                    if (wasFree) {
+                        await onPlanUpgrade(normalizedShop, admin);
+                    }
+                    
                     return redirect("/app?billing=success");
                 }
             }
@@ -87,8 +109,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             console.log(`Subscription status check result:`, activeSub);
 
             if (activeSub && (activeSub.status === "ACTIVE" || activeSub.status === "PENDING")) {
+                const wasFree = shop.plan === "FREE";
                 await updateShopPlan(normalizedShop, "PREMIUM");
                 console.log(`Successfully updated shop ${normalizedShop} to PREMIUM plan`);
+                
+                // Handle plan upgrade: update branding settings
+                if (wasFree) {
+                    await onPlanUpgrade(normalizedShop, admin);
+                }
+                
                 return redirect("/app?billing=success");
             }
         } catch (subError) {

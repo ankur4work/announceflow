@@ -142,11 +142,20 @@ export interface GlobalSettings {
 }
 
 /**
+ * Plan Settings (stored in metafield)
+ */
+export interface PlanSettings {
+  plan: "FREE" | "PREMIUM";
+  show_branding: boolean;
+}
+
+/**
  * Complete Bars Configuration (stored in metafield)
  */
 export interface BarsConfig {
   bars: Bar[];
   global_settings: GlobalSettings;
+  settings?: PlanSettings; // Plan and branding settings
   version: string; // schema version for migrations
 }
 
@@ -162,6 +171,10 @@ export const DEFAULT_BARS_CONFIG: BarsConfig = {
     default_text_color: "#FFFFFF",
     analytics_enabled: true,
     max_bars_displayed: 3,
+  },
+  settings: {
+    plan: "FREE",
+    show_branding: true, // FREE plan always shows branding
   },
   version: "1.0.0",
 };

@@ -299,10 +299,17 @@ export async function getBarsConfig(
     if (data.shop?.metafield?.value) {
       try {
         const config = JSON.parse(data.shop.metafield.value) as BarsConfig;
-        return {
+        // Merge with defaults, ensuring settings are properly merged
+        const mergedConfig = {
           ...DEFAULT_BARS_CONFIG,
           ...config,
+          global_settings: {
+            ...DEFAULT_BARS_CONFIG.global_settings,
+            ...config.global_settings,
+          },
+          settings: config.settings || DEFAULT_BARS_CONFIG.settings,
         };
+        return mergedConfig;
       } catch (parseError) {
         console.error("Error parsing bars config JSON:", parseError);
         return DEFAULT_BARS_CONFIG;
@@ -317,13 +324,62 @@ export async function getBarsConfig(
 }
 
 /**
+ * Ensure branding settings are set correctly based on plan
+ * This enforces: FREE plan always shows branding, PREMIUM can toggle
+ */
+function ensureBrandingSettings(
+  config: BarsConfig,
+  currentPlan: "FREE" | "PREMIUM"
+): BarsConfig {
+  // Initialize settings if not present
+  if (!config.settings) {
+    config.settings = {
+      plan: currentPlan,
+      show_branding: currentPlan === "FREE" ? true : false,
+    };
+  } else {
+    // Update plan
+    config.settings.plan = currentPlan;
+    
+    // Enforce branding rules
+    if (currentPlan === "FREE") {
+      // FREE plan: always show branding, cannot be disabled
+      config.settings.show_branding = true;
+    } else {
+      // PREMIUM plan: default to false, but allow user to set it
+      // Only set default if not already set
+      if (config.settings.show_branding === undefined) {
+        config.settings.show_branding = false;
+      }
+    }
+  }
+
+  return config;
+}
+
+/**
  * Write bar configuration to metafields
+ * Automatically sets branding based on current plan
  */
 export async function setBarsConfig(
   admin: AdminClient,
-  config: BarsConfig
+  config: BarsConfig,
+  shopDomain?: string
 ): Promise<{ success: boolean; errors?: string[] }> {
   try {
+    // Get current plan from database if shopDomain provided
+    let currentPlan: "FREE" | "PREMIUM" = "FREE";
+    if (shopDomain) {
+      const shop = await getShopByDomain(shopDomain);
+      currentPlan = shop?.plan || "FREE";
+    } else {
+      // Try to get plan from existing config
+      currentPlan = config.settings?.plan || "FREE";
+    }
+
+    // Ensure branding settings are correct
+    const updatedConfig = ensureBrandingSettings(config, currentPlan);
+
     const shopId = await getShopId(admin);
 
     const response = await admin.graphql(SET_BARS_CONFIG_MUTATION, {
@@ -334,7 +390,7 @@ export async function setBarsConfig(
             namespace: METAFIELD_NAMESPACE,
             key: METAFIELD_KEY,
             type: METAFIELD_TYPE,
-            value: JSON.stringify(config),
+            value: JSON.stringify(updatedConfig),
           },
         ],
       },
@@ -747,4 +803,136 @@ export async function getGlobalSettings(
 ): Promise<BarsConfig["global_settings"]> {
   const config = await getBarsConfig(admin);
   return config.global_settings;
+}
+
+/**
+ * Handle plan upgrade: Update branding settings when shop upgrades to PREMIUM
+ * @param shopDomain - The shop domain
+ * @param admin - Admin client for GraphQL queries
+ */
+export async function onPlanUpgrade(
+  shopDomain: string,
+  admin: AdminClient
+): Promise<{ success: boolean; errors?: string[] }> {
+  try {
+    console.log(`Handling plan upgrade for shop: ${shopDomain}`);
+    
+    // Get current bars config
+    const config = await getBarsConfig(admin);
+    
+    // Update branding settings: PREMIUM plan defaults to show_branding: false
+    if (!config.settings) {
+      config.settings = {
+        plan: "PREMIUM",
+        show_branding: false,
+      };
+    } else {
+      config.settings.plan = "PREMIUM";
+      // Allow user to keep branding if they want (for affiliate program)
+      // Only set to false if it was forced to true (FREE plan)
+      if (config.settings.show_branding === true && config.settings.plan === "FREE") {
+        config.settings.show_branding = false;
+      }
+    }
+
+    // Save updated config
+    const result = await setBarsConfig(admin, config, shopDomain);
+
+    if (result.success) {
+      console.log(`Successfully updated branding settings for upgraded shop: ${shopDomain}`);
+      return { success: true };
+    }
+
+    return { success: false, errors: result.errors };
+  } catch (error) {
+    console.error(`Error handling plan upgrade for ${shopDomain}:`, error);
+    return {
+      success: false,
+      errors: [error instanceof Error ? error.message : "Unknown error"],
+    };
+  }
+}
+
+/**
+ * Handle plan downgrade/cancel: Update branding settings when shop downgrades to FREE
+ * Also disables extra bars if more than 1 bar exists (keeps oldest)
+ * @param shopDomain - The shop domain
+ * @param admin - Admin client for GraphQL queries
+ */
+export async function onPlanDowngrade(
+  shopDomain: string,
+  admin: AdminClient
+): Promise<{ success: boolean; errors?: string[]; disabledBars?: string[] }> {
+  try {
+    console.log(`Handling plan downgrade for shop: ${shopDomain}`);
+    
+    // Get current bars config
+    const config = await getBarsConfig(admin);
+    
+    // Update branding settings: FREE plan always shows branding
+    if (!config.settings) {
+      config.settings = {
+        plan: "FREE",
+        show_branding: true,
+      };
+    } else {
+      config.settings.plan = "FREE";
+      config.settings.show_branding = true; // FREE plan always shows branding
+    }
+
+    // Handle bar limits: FREE plan can only have 1 bar
+    const disabledBars: string[] = [];
+    if (config.bars.length > 1) {
+      // Sort bars by created_at (oldest first)
+      const sortedBars = [...config.bars].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateA - dateB;
+      });
+
+      // Keep the oldest bar, disable all others
+      const oldestBar = sortedBars[0];
+      for (let i = 1; i < sortedBars.length; i++) {
+        const bar = sortedBars[i];
+        bar.enabled = false;
+        bar.updated_at = new Date().toISOString();
+        disabledBars.push(bar.id);
+      }
+
+      // If more than 1 bar total, we should ideally delete extras, but for now just disable
+      // In a production system, you might want to delete bars beyond the limit
+      console.log(`Disabled ${disabledBars.length} bars for FREE plan (keeping oldest: ${oldestBar.id})`);
+    }
+
+    // Also ensure only 1 bar is enabled (FREE plan limit)
+    const enabledBars = config.bars.filter((bar) => bar.enabled);
+    if (enabledBars.length > 1) {
+      // Keep the first enabled bar, disable others
+      const firstEnabled = enabledBars[0];
+      for (let i = 1; i < enabledBars.length; i++) {
+        const bar = enabledBars[i];
+        bar.enabled = false;
+        bar.updated_at = new Date().toISOString();
+        if (!disabledBars.includes(bar.id)) {
+          disabledBars.push(bar.id);
+        }
+      }
+    }
+
+    // Save updated config
+    const result = await setBarsConfig(admin, config, shopDomain);
+
+    if (result.success) {
+      console.log(`Successfully updated branding settings and bars for downgraded shop: ${shopDomain}`);
+      return { success: true, disabledBars };
+    }
+
+    return { success: false, errors: result.errors };
+  } catch (error) {
+    console.error(`Error handling plan downgrade for ${shopDomain}:`, error);
+    return {
+      success: false,
+      errors: [error instanceof Error ? error.message : "Unknown error"],
+    };
+  }
 }
