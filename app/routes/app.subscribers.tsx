@@ -124,11 +124,43 @@ export default function Subscribers() {
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      // Trigger CSV download via the export API
-      window.location.href = "/api/subscribers/export";
+      // Fetch the CSV export
+      const response = await fetch("/api/subscribers/export");
+
+      if (!response.ok) {
+        // Handle error responses
+        if (response.status === 402) {
+          console.error("CSV export requires premium plan");
+          // Could show a toast/banner here
+          return;
+        }
+        const error = await response.json().catch(() => ({ error: "Export failed" }));
+        console.error("Export error:", error);
+        return;
+      }
+
+      // Get the filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `subscribers-${new Date().toISOString().split("T")[0]}.csv`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting subscribers:", error);
     } finally {
-      // Reset after a short delay (download will have started)
-      setTimeout(() => setIsExporting(false), 1000);
+      setIsExporting(false);
     }
   }, []);
 
