@@ -82,7 +82,6 @@ export async function registerAppWebhooks(
         { topic: "SHOP_REDACT", endpoint: "/webhooks/shop/redact" },
     ];
 
-    console.log("Registering app webhooks...");
 
     for (const hook of webhooks) {
         try {
@@ -108,10 +107,8 @@ export async function registerAppWebhooks(
                         JSON.stringify(errors)
                     );
                 } else {
-                    console.log(`Webhook ${hook.topic} already registered.`);
                 }
             } else {
-                console.log(`Successfully registered webhook ${hook.topic}`);
             }
 
         } catch (error) {
