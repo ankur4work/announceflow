@@ -58,19 +58,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
 
-  // Get shop from database
-  const shop = await getShopByDomain(shopDomain);
+  console.log("[Subscribers] Loading for shop:", shopDomain);
+
+  // Get shop from database, create if doesn't exist
+  let shop = await getShopByDomain(shopDomain);
 
   if (!shop) {
-    return json<LoaderData>({
-      isPremium: false,
-      subscribers: [],
-      total: 0,
-      stats: { total: 0, this_week: 0, this_month: 0 },
-      limit: ITEMS_PER_PAGE,
-      offset: 0,
-      has_more: false,
-    });
+    console.log("[Subscribers] Shop not found, creating:", shopDomain);
+    // Import createShop or use prisma directly
+    const { createShop } = await import("../lib/db.server");
+    try {
+      shop = await createShop(shopDomain, session.accessToken || "");
+      console.log("[Subscribers] Shop created:", shop.id);
+    } catch (e) {
+      console.error("[Subscribers] Failed to create shop:", e);
+      return json<LoaderData>({
+        isPremium: false,
+        subscribers: [],
+        total: 0,
+        stats: { total: 0, this_week: 0, this_month: 0 },
+        limit: ITEMS_PER_PAGE,
+        offset: 0,
+        has_more: false,
+      });
+    }
   }
 
   const isPremium = shop.plan === "PREMIUM";
