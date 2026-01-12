@@ -185,6 +185,7 @@ export default function Dashboard() {
   const isDeleting = fetcher.state === "submitting" && fetcher.formData?.get("intent") === "delete";
   const [togglingBars, setTogglingBars] = useState<Set<string>>(new Set());
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [retryLoading, setRetryLoading] = useState(false);
 
   // Track loading state during revalidation
@@ -740,12 +741,32 @@ export default function Dashboard() {
         onClose={() => setUpgradeModalOpen(false)}
         title="Upgrade to Premium"
         primaryAction={{
-          content: "Start Free Trial",
-          onAction: () => {
-            // TODO: Integrate with Shopify billing API
-            shopify.toast.show("Billing integration coming soon!");
-            setUpgradeModalOpen(false);
+          content: isUpgrading ? "Processing..." : "Start Free Trial",
+          loading: isUpgrading,
+          onAction: async () => {
+            setIsUpgrading(true);
+            try {
+              const response = await fetch("/api/billing/subscribe", {
+                method: "POST",
+              });
+              const data = await response.json();
+
+              if (data.success && data.confirmationUrl) {
+                // Redirect to Shopify billing confirmation page
+                window.top!.location.href = data.confirmationUrl;
+              } else {
+                shopify.toast.show(data.error || "Failed to start subscription", { isError: true });
+                setUpgradeModalOpen(false);
+              }
+            } catch (error) {
+              console.error("Billing error:", error);
+              shopify.toast.show("Failed to connect to billing service", { isError: true });
+              setUpgradeModalOpen(false);
+            } finally {
+              setIsUpgrading(false);
+            }
           },
+          disabled: isUpgrading,
         }}
         secondaryActions={[
           {

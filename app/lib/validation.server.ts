@@ -4,6 +4,37 @@
  */
 
 /**
+ * Validate email format
+ * Uses RFC 5322 compliant regex pattern
+ */
+export function validateEmail(email: string): {
+  valid: boolean;
+  error?: string;
+} {
+  if (!email || typeof email !== "string") {
+    return { valid: false, error: "Email is required" };
+  }
+
+  const trimmed = email.trim().toLowerCase();
+  if (trimmed.length === 0) {
+    return { valid: false, error: "Email cannot be empty" };
+  }
+
+  if (trimmed.length > 254) {
+    return { valid: false, error: "Email is too long" };
+  }
+
+  // RFC 5322 compliant email regex
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+  if (!emailRegex.test(trimmed)) {
+    return { valid: false, error: "Invalid email format" };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Validate if a string is a valid URL
  * Accepts both full URLs (https://...) and domains (example.com)
  */

@@ -78,14 +78,19 @@ export {
   deleteShopData,
   createSubscriber,
   getSubscribersByShop,
+  getSubscriberCount,
+  getSubscriberStats,
   getSubscriberByEmail,
+  deleteSubscriber,
   deleteSubscriberByEmail,
   deleteAllSubscribers,
   exportSubscribersCSV,
+  subscriberExists,
 } from "./db.server";
 
 // Validation Utilities
 export {
+  validateEmail,
   validateUrl,
   validateScheduleDates,
   validatePriority,
@@ -98,6 +103,13 @@ export {
   validateFontSize,
   validateBar,
 } from "./validation.server";
+
+// Rate Limiting
+export {
+  checkRateLimit,
+  getClientIP,
+  getRateLimitHeaders,
+} from "./rate-limiter.server";
 
 // Webhook Utilities
 export { verifyWebhookHMAC, registerAppWebhooks } from "./webhook.server";
