@@ -45,18 +45,7 @@ const APP_SUBSCRIPTION_CREATE = `#graphql
   }
 `;
 
-const APP_SUBSCRIPTION_QUERY = `#graphql
-  mutation AppSubscriptionQuery {
-    appInstallation {
-      activeSubscriptions {
-        id
-        name
-        status
-        test
-      }
-    }
-  }
-`;
+// Note: Subscription query is defined inline in getActiveSubscription() function below
 
 /**
  * Create a new recurring subscription

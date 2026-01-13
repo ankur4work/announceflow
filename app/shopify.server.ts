@@ -45,20 +45,14 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ session }) => {
       shopify.registerWebhooks({ session });
-      // Import here dynamically to avoid circular dependencies if any, 
-      // or just trust the imports at top are fine. 
-      // But wait, createShop is not imported. I need to add import or use dynamic import.
-      // Let's add the import at the top first? No, replace_file_content can't do two places easily.
-      // I will use dynamic import or just rely on global prisma if needed, but db.server.ts exports createShop.
-      // Actually, I can just use prisma directly here if createShop is too complex to import mid-file?
-      // No, best practice is to use the helper.
-      // Let's assume I will add the import in a separate tool call if needed, 
-      // OR I can just use prisma.shop.upsert here directly for simplicity and reliability.
 
-      const { createShop, getShopByDomain } = await import("./lib/db.server");
-      const existing = await getShopByDomain(session.shop);
-      if (!existing && session.accessToken) {
-        await createShop(session.shop, session.accessToken);
+      // Use upsert to handle:
+      // 1. Race conditions during OAuth (multiple concurrent requests)
+      // 2. Re-authentication (updates accessToken and clears uninstalledAt)
+      // 3. New installations
+      if (session.accessToken) {
+        const { upsertShop } = await import("./lib/db.server");
+        await upsertShop(session.shop, session.accessToken);
       }
     },
   },
