@@ -762,3 +762,158 @@
     width: 100px;
   }
 }
+
+/* =============================================
+   Theme Compatibility Fixes
+   ============================================= */
+
+/**
+ * These styles ensure AnnounceFlow works correctly
+ * across various Shopify themes by handling common
+ * CSS conflicts and z-index stacking issues.
+ */
+
+/* Ensure bar stays above theme headers */
+.announceflow-bar--sticky.announceflow-bar--top {
+  z-index: 9999;
+}
+
+/* Force bar above Shopify section headers */
+.shopify-section .announceflow-bar {
+  position: relative;
+  z-index: 9999;
+}
+
+/* Dawn Theme Fixes */
+/* Dawn uses sticky header - ensure bar doesn't conflict */
+.header--has-menu ~ .announceflow-bar--sticky,
+.header-wrapper ~ .announceflow-bar--sticky {
+  z-index: 10000;
+}
+
+/* Refresh Theme Fixes */
+/* Refresh has drawer navigation that needs to overlay */
+.drawer-menu ~ .announceflow-bar {
+  z-index: 999;
+}
+
+/* Ensure sticky top bar works with Refresh's header structure */
+.section-header ~ .announceflow-bar--sticky.announceflow-bar--top {
+  top: 0;
+}
+
+/* Craft Theme Fixes */
+/* Craft uses minimal styling - ensure inputs remain styled */
+.announceflow-email-form__input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+/* Reset any theme button styles */
+.announceflow-email-form__button,
+.announceflow-cookie__btn,
+.announceflow-bar__cta {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* Ensure text doesn't inherit theme link styles */
+.announceflow-bar a,
+.announceflow-bar__cta {
+  text-decoration: none;
+  color: inherit;
+}
+
+.announceflow-bar__cta--link {
+  text-decoration: underline;
+}
+
+/* Override theme's global link hover colors */
+.announceflow-bar a:hover,
+.announceflow-bar__cta:hover {
+  color: inherit;
+}
+
+/* Fix for themes that set global box-sizing differently */
+.announceflow-bar *,
+.announceflow-bar *::before,
+.announceflow-bar *::after {
+  box-sizing: border-box;
+}
+
+/* Fix for themes with aggressive button resets */
+.announceflow-bar button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Mobile navigation overlay fix */
+/* Ensure mobile nav menus appear above our bar when open */
+@media screen and (max-width: 768px) {
+  .menu-drawer,
+  .mobile-nav,
+  .nav-drawer,
+  [data-menu-drawer],
+  .header__menu-drawer {
+    z-index: 10001 !important;
+  }
+
+  /* Lower bar z-index on mobile to not conflict with nav */
+  .announceflow-bar--sticky {
+    z-index: 9998;
+  }
+}
+
+/* Fix for themes using CSS Grid that might affect bar layout */
+.announceflow-bar,
+.announceflow-bar__inner,
+.announceflow-bar__content {
+  display: flex !important;
+}
+
+/* Ensure bar doesn't inherit theme's text transforms */
+.announceflow-bar {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Fix for themes that hide overflow on body */
+html.announceflow-bar-visible,
+body.announceflow-bar-visible {
+  overflow-x: visible;
+}
+
+/* Ensure visibility animation works with all themes */
+.announceflow-bar[style*="display: none"] {
+  display: none !important;
+}
+
+/* Sticky position fallback for older themes */
+@supports not (position: sticky) {
+  .announceflow-bar--sticky.announceflow-bar--top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+}
+
+/* Fix for themes using will-change that might affect stacking */
+.announceflow-bar {
+  will-change: transform, opacity;
+  transform-style: flat;
+}
+
+/* Ensure proper isolation from theme styles */
+.announceflow-bar {
+  isolation: isolate;
+}
