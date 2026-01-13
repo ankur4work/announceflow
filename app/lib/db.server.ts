@@ -49,6 +49,38 @@ export async function createShop(
 }
 
 /**
+ * Create or update shop (upsert) - handles race conditions and re-authentication
+ * This is the preferred method for afterAuth hooks to prevent duplicate key errors
+ */
+export async function upsertShop(
+  domain: string,
+  accessToken: string
+): Promise<Shop> {
+  try {
+    const shop = await prisma.shop.upsert({
+      where: {
+        shopDomain: domain,
+      },
+      update: {
+        accessToken: accessToken,
+        // Clear uninstalledAt if shop is re-installing
+        uninstalledAt: null,
+      },
+      create: {
+        shopDomain: domain,
+        accessToken: accessToken,
+        plan: "FREE",
+        installedAt: new Date(),
+      },
+    });
+    return shop;
+  } catch (error) {
+    console.error(`Error upserting shop (${domain}):`, error);
+    throw new Error("Failed to upsert shop");
+  }
+}
+
+/**
  * Update shop plan
  */
 export async function updateShopPlan(

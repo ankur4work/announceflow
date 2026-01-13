@@ -75,9 +75,11 @@ export async function registerAppWebhooks(
     admin: AdminClient,
     appUrl: string
 ): Promise<void> {
+    // NOTE: Endpoint paths must match Remix route file names
+    // webhooks.customers.data-request.tsx -> /webhooks/customers/data-request (hyphen, not underscore)
     const webhooks = [
         { topic: "APP_UNINSTALLED", endpoint: "/webhooks/app/uninstalled" },
-        { topic: "CUSTOMERS_DATA_REQUEST", endpoint: "/webhooks/customers/data_request" },
+        { topic: "CUSTOMERS_DATA_REQUEST", endpoint: "/webhooks/customers/data-request" },
         { topic: "CUSTOMERS_REDACT", endpoint: "/webhooks/customers/redact" },
         { topic: "SHOP_REDACT", endpoint: "/webhooks/shop/redact" },
     ];

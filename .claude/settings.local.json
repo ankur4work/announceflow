@@ -27,12 +27,17 @@
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(git push:*)",
-      "Bash(git -C C:/Users/isunn/OneDrive/문서/13\\\\ claude\\\\ code/jan/AnnounceFlow rev-parse:*)",
+      "Bash(git -C C:/Users/isunn/OneDrive/문서/13\\ claude\\ code/jan/AnnounceFlow rev-parse:*)",
       "Bash(xargs cat:*)",
       "Bash(npm run build:*)",
       "Bash(gh api:*)",
       "WebFetch(domain:github.com)",
       "Bash(git checkout:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(node -e:*)",
+      "Bash(ls:*)",
+      "Bash(git pull:*)",
       "Bash(git stash:*)"
     ]
   }
