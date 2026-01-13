@@ -270,7 +270,13 @@ export default function Dashboard() {
       setDeleteModalOpen(false);
       setBarToDelete(null);
     } else if (data?.success && data.enabled !== undefined) {
-      shopify.toast.show(data.enabled ? "Bar enabled" : "Bar disabled");
+      // Show toast for enabled/disabled state
+      let message = data.enabled ? "Bar enabled" : "Bar disabled";
+      // If other bars were auto-disabled, notify the user
+      if (data.auto_disabled && data.auto_disabled.length > 0) {
+        message += ` (${data.auto_disabled.length} other bar${data.auto_disabled.length > 1 ? "s" : ""} disabled)`;
+      }
+      shopify.toast.show(message);
     }
   }, [fetcher.data, shopify]);
 
@@ -280,30 +286,21 @@ export default function Dashboard() {
   const totalClicks = validBars.reduce((sum, bar) => sum + (bar.analytics?.clicks || 0), 0);
   const clickRate = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0";
 
-  // Handle toggle bar enabled (optimistic update with fetcher)
+  // Handle toggle bar enabled
   const handleToggle = useCallback((bar: Bar) => {
     setTogglingBars((prev) => new Set(prev).add(bar.id));
-
-    // We can rely on automatic revalidation or optimistic UI, 
-    // but here we just submit and wait for reloader.
-    // Ideally we would optimistically update the state, but Remix loaders will re-run automatically.
-
     fetcher.submit(
       { intent: "toggle", barId: bar.id },
       { method: "post" }
     );
-
-    // Remove from toggling set after a short delay (or when revalidation completes)
-    // For now we just assume it's quick
-    setTimeout(() => {
-      setTogglingBars((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(bar.id);
-        return newSet;
-      });
-    }, 500);
-
   }, [fetcher]);
+
+  // Clear toggling state when fetcher completes
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data) {
+      setTogglingBars(new Set());
+    }
+  }, [fetcher.state, fetcher.data]);
 
   // Handle delete
   const handleDeleteClick = useCallback((bar: Bar) => {

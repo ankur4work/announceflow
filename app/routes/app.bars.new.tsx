@@ -86,6 +86,8 @@ interface FormErrors {
   text?: string;
   ctaLink?: string;
   endDatetime?: string;
+  privacyLink?: string;
+  shippingThreshold?: string;
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -416,8 +418,22 @@ export default function CreateBar() {
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.content.text.trim()) {
+    // Text is required for all types except cookie_consent and free_shipping
+    if (formData.type !== "cookie_consent" && formData.type !== "free_shipping" && !formData.content.text.trim()) {
       newErrors.text = "Announcement text is required";
+    }
+
+    // Cookie consent requires privacy link
+    if (formData.type === "cookie_consent" && !formData.cookie.privacyLink.trim()) {
+      newErrors.privacyLink = "Privacy policy URL is required";
+    }
+
+    // Free shipping requires valid threshold
+    if (formData.type === "free_shipping") {
+      const threshold = parseFloat(formData.shipping.threshold);
+      if (isNaN(threshold) || threshold <= 0) {
+        newErrors.shippingThreshold = "Shipping threshold must be a positive number";
+      }
     }
 
     if (formData.type !== "countdown" && formData.content.ctaLink && !isValidUrl(formData.content.ctaLink)) {
@@ -724,6 +740,7 @@ export default function CreateBar() {
                             autoComplete="off"
                             requiredIndicator
                             helpText="Link to your privacy policy"
+                            error={errors.privacyLink}
                           />
                           <TextField
                             label="Privacy Link Text"
@@ -749,6 +766,7 @@ export default function CreateBar() {
                             autoComplete="off"
                             requiredIndicator
                             helpText="Order amount for free shipping"
+                            error={errors.shippingThreshold}
                           />
                           <Select
                             label="Currency"

@@ -257,9 +257,31 @@ export default function EditBar() {
       dismissible !== bar.settings.dismissible ||
       endDatetime !== (bar.content.end_datetime || "") ||
       expiredText !== (bar.content.expired_text || "This offer has ended") ||
-      hideWhenExpired !== (bar.settings.hide_when_expired || false);
+      hideWhenExpired !== (bar.settings.hide_when_expired || false) ||
+      // Email capture fields
+      emailPlaceholder !== (bar.content.placeholder || "Enter your email") ||
+      emailButtonText !== (bar.content.button_text || "Subscribe") ||
+      emailSuccessMessage !== (bar.content.success_message || "Thanks! Check your inbox.") ||
+      emailErrorMessage !== (bar.content.error_message || "Please enter a valid email") ||
+      // Cookie consent fields
+      acceptText !== (bar.content.accept_text || "Accept") ||
+      declineText !== (bar.content.decline_text || "Decline") ||
+      privacyLink !== (bar.content.privacy_link || "/pages/privacy-policy") ||
+      privacyText !== (bar.content.privacy_text || "Learn more") ||
+      showDecline !== (bar.settings.show_decline !== false) ||
+      // Free shipping fields
+      shippingThreshold !== String(bar.content.threshold || 50) ||
+      shippingCurrency !== (bar.content.currency || "USD") ||
+      shippingMessageTemplate !== (bar.content.message_template || "Spend {remaining} more for FREE shipping!") ||
+      shippingSuccessMessage !== (bar.content.success_message || "You've unlocked FREE shipping!") ||
+      showProgressBar !== (bar.settings.show_progress_bar !== false) ||
+      // Style extensions
+      buttonBgColor !== (bar.style.button_bg_color || "#E74C3C") ||
+      buttonTextColor !== (bar.style.button_text_color || "#FFFFFF") ||
+      progressColor !== (bar.style.progress_color || "#FFFFFF") ||
+      progressBgColor !== (bar.style.progress_bg_color || "rgba(255,255,255,0.3)");
     setIsDirty(isChanged);
-  }, [name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired, bar]);
+  }, [name, type, text, ctaText, ctaLink, ctaStyle, position, bgColor, textColor, fontSize, enabled, dismissible, endDatetime, expiredText, hideWhenExpired, emailPlaceholder, emailButtonText, emailSuccessMessage, emailErrorMessage, acceptText, declineText, privacyLink, privacyText, showDecline, shippingThreshold, shippingCurrency, shippingMessageTemplate, shippingSuccessMessage, showProgressBar, buttonBgColor, buttonTextColor, progressColor, progressBgColor, bar]);
 
 
   useEffect(() => {
