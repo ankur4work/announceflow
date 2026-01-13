@@ -216,6 +216,8 @@ export default function Dashboard() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [retryLoading, setRetryLoading] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
   // Track loading state during revalidation
   const isLoading = navigation.state === "loading" || revalidator.state === "loading" || retryLoading;
@@ -226,6 +228,46 @@ export default function Dashboard() {
   // Plan logic
   const isFreePlan = !plan.isPremium;
   const hasReachedBarLimit = isFreePlan && validBars.length >= plan.barLimit;
+
+  // Onboarding steps
+  const onboardingSteps = [
+    {
+      title: "Enable AnnounceFlow App",
+      content: "To display announcement bars on your store, you need to enable the AnnounceFlow app in your theme editor.",
+      instructions: [
+        "Go to Online Store > Themes",
+        "Click 'Customize' on your active theme",
+        "Click 'App embeds' in the left sidebar",
+        "Toggle AnnounceFlow ON",
+        "Click Save"
+      ]
+    },
+    {
+      title: "Create Your First Bar",
+      content: "Create announcement bars to engage your customers with promotions, countdowns, email signups, and more!",
+      instructions: [
+        "Click 'Create Bar' button",
+        "Choose a bar type (Promotional, Countdown, etc.)",
+        "Customize the message and style",
+        "Enable the bar and save"
+      ]
+    }
+  ];
+
+  // Check for first-time user
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem("announceflow_onboarding_complete");
+    if (!hasSeenOnboarding) {
+      setOnboardingOpen(true);
+    }
+  }, []);
+
+  // Handle onboarding close
+  const handleOnboardingClose = useCallback(() => {
+    localStorage.setItem("announceflow_onboarding_complete", "true");
+    setOnboardingOpen(false);
+    setOnboardingStep(0);
+  }, []);
 
   // Show toast messages based on URL params
   useEffect(() => {
@@ -896,6 +938,72 @@ export default function Dashboard() {
                 </Text>
               </BlockStack>
             </Box>
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
+
+      {/* Onboarding Modal */}
+      <Modal
+        open={onboardingOpen}
+        onClose={handleOnboardingClose}
+        title={`Step ${onboardingStep + 1} of ${onboardingSteps.length}: ${onboardingSteps[onboardingStep].title}`}
+        primaryAction={{
+          content: onboardingStep < onboardingSteps.length - 1 ? "Next" : "Get Started",
+          onAction: () => {
+            if (onboardingStep < onboardingSteps.length - 1) {
+              setOnboardingStep(onboardingStep + 1);
+            } else {
+              handleOnboardingClose();
+            }
+          },
+        }}
+        secondaryActions={[
+          {
+            content: onboardingStep > 0 ? "Back" : "Skip",
+            onAction: () => {
+              if (onboardingStep > 0) {
+                setOnboardingStep(onboardingStep - 1);
+              } else {
+                handleOnboardingClose();
+              }
+            },
+          },
+        ]}
+      >
+        <Modal.Section>
+          <BlockStack gap="400">
+            <Text as="p">{onboardingSteps[onboardingStep].content}</Text>
+            <BlockStack gap="200">
+              {onboardingSteps[onboardingStep].instructions.map((instruction, idx) => (
+                <InlineStack key={idx} gap="200" blockAlign="start">
+                  <Box
+                    background="bg-fill-success"
+                    padding="100"
+                    borderRadius="full"
+                    minWidth="24px"
+                  >
+                    <Text as="span" variant="bodySm" fontWeight="bold" alignment="center">
+                      {idx + 1}
+                    </Text>
+                  </Box>
+                  <Text as="span">{instruction}</Text>
+                </InlineStack>
+              ))}
+            </BlockStack>
+            {/* Step indicators */}
+            <InlineStack align="center" gap="200">
+              {onboardingSteps.map((_, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    backgroundColor: idx === onboardingStep ? "#008060" : "#d9d9d9",
+                  }}
+                />
+              ))}
+            </InlineStack>
           </BlockStack>
         </Modal.Section>
       </Modal>

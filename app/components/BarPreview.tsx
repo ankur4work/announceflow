@@ -494,6 +494,7 @@ export function BarPreview({
                     <div
                         style={{
                             width: containerWidth,
+                            maxWidth: "100%",
                             margin: "0 auto",
                             transition: "width 0.3s ease",
                         }}
