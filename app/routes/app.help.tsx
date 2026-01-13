@@ -506,17 +506,17 @@ export default function Help() {
               </Text>
 
               <BlockStack gap="200">
-                <InlineStack gap="200" blockAlign="center">
+                <InlineStack gap="100" blockAlign="center">
                   <Icon source={EmailIcon} tone="base" />
                   <Text as="span" variant="bodyMd" fontWeight="semibold">
                     Email:
                   </Text>
-                  <Link url="mailto:support@codershive.com" removeUnderline>
-                    support@codershive.com
+                  <Link url="mailto:devteam@sabaiinovations.com" removeUnderline>
+                    devteam@sabaiinovations.com
                   </Link>
                 </InlineStack>
 
-                <InlineStack gap="200" blockAlign="center">
+                <InlineStack gap="100" blockAlign="center">
                   <Icon source={ClockIcon} tone="base" />
                   <Text as="span" variant="bodyMd" fontWeight="semibold">
                     Response time:
@@ -531,7 +531,7 @@ export default function Help() {
                 <InlineStack gap="300">
                   <Button
                     variant="primary"
-                    url="mailto:support@codershive.com?subject=AnnounceFlow Support Request"
+                    url="mailto:devteam@sabaiinovations.com?subject=AnnounceFlow Support Request"
                     external
                   >
                     Contact Support
