@@ -9,13 +9,26 @@ export { prisma };
 // ============================================
 
 /**
+ * Normalize shop domain to consistent format (lowercase, no protocol/path)
+ * This ensures consistent lookups regardless of input format
+ */
+function normalizeShopDomain(domain: string): string {
+  return domain
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .replace(/\/admin.*$/, "")
+    .toLowerCase();
+}
+
+/**
  * Get shop by domain
  */
 export async function getShopByDomain(domain: string): Promise<Shop | null> {
   try {
+    const normalizedDomain = normalizeShopDomain(domain);
     const shop = await prisma.shop.findUnique({
       where: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
       },
     });
     return shop;
@@ -33,9 +46,10 @@ export async function createShop(
   accessToken: string
 ): Promise<Shop> {
   try {
+    const normalizedDomain = normalizeShopDomain(domain);
     const shop = await prisma.shop.create({
       data: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
         accessToken: accessToken,
         plan: "FREE",
         installedAt: new Date(),
@@ -57,9 +71,10 @@ export async function upsertShop(
   accessToken: string
 ): Promise<Shop> {
   try {
+    const normalizedDomain = normalizeShopDomain(domain);
     const shop = await prisma.shop.upsert({
       where: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
       },
       update: {
         accessToken: accessToken,
@@ -67,7 +82,7 @@ export async function upsertShop(
         uninstalledAt: null,
       },
       create: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
         accessToken: accessToken,
         plan: "FREE",
         installedAt: new Date(),
@@ -88,9 +103,10 @@ export async function updateShopPlan(
   plan: "FREE" | "PREMIUM"
 ): Promise<Shop> {
   try {
+    const normalizedDomain = normalizeShopDomain(domain);
     const shop = await prisma.shop.update({
       where: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
       },
       data: {
         plan: plan,
@@ -108,9 +124,10 @@ export async function updateShopPlan(
  */
 export async function markShopUninstalled(domain: string): Promise<void> {
   try {
+    const normalizedDomain = normalizeShopDomain(domain);
     await prisma.shop.update({
       where: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
       },
       data: {
         uninstalledAt: new Date(),
@@ -127,10 +144,12 @@ export async function markShopUninstalled(domain: string): Promise<void> {
  */
 export async function deleteShopData(domain: string): Promise<void> {
   try {
+    const normalizedDomain = normalizeShopDomain(domain);
+
     // First get the shop to get its ID
     const shop = await prisma.shop.findUnique({
       where: {
-        shopDomain: domain,
+        shopDomain: normalizedDomain,
       },
     });
 
@@ -149,7 +168,7 @@ export async function deleteShopData(domain: string): Promise<void> {
       // Delete the shop
       prisma.shop.delete({
         where: {
-          shopDomain: domain,
+          shopDomain: normalizedDomain,
         },
       }),
     ]);
@@ -389,36 +408,3 @@ export async function deleteAllSubscribers(shopId: string): Promise<void> {
   }
 }
 
-/**
- * Export subscribers as CSV string
- */
-export async function exportSubscribersCSV(shopId: string): Promise<string> {
-  try {
-    const subscribers = await getSubscribersByShop(shopId);
-
-    if (subscribers.length === 0) {
-      return "email,bar_id,captured_at,ip_address\n";
-    }
-
-    // Create CSV header
-    const header = "email,bar_id,captured_at,ip_address\n";
-
-    // Create CSV rows
-    const rows = subscribers.map((sub) => {
-      const email = `"${sub.email.replace(/"/g, '""')}"`;
-      const barId = `"${sub.barId.replace(/"/g, '""')}"`;
-      const capturedAt = sub.createdAt.toISOString();
-      const ipAddress = sub.ipAddress
-        ? `"${sub.ipAddress.replace(/"/g, '""')}"`
-        : "";
-
-      return `${email},${barId},${capturedAt},${ipAddress}`;
-    });
-
-    const csv = header + rows.join("\n");
-    return csv;
-  } catch (error) {
-    console.error(`Error exporting subscribers CSV (shop: ${shopId}):`, error);
-    throw new Error("Failed to export subscribers");
-  }
-}

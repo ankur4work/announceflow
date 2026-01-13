@@ -128,15 +128,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         return redirect("/app?billing=failed");
     } catch (error) {
         console.error("Error handling billing callback:", error);
+
         // Try to extract shop from request if authentication failed
+        // This can happen when redirecting from Shopify billing page
         try {
             const url = new URL(request.url);
             const shopParam = url.searchParams.get("shop");
-            if (shopParam) {
+            const chargeId = url.searchParams.get("charge_id");
+
+            console.log(`Fallback: shop=${shopParam}, charge_id=${chargeId}`);
+
+            if (shopParam && chargeId) {
                 const normalizedShop = normalizeShopDomain(shopParam);
                 console.log(`Attempting to update plan for shop from URL param: ${normalizedShop}`);
-                await updateShopPlan(normalizedShop, "PREMIUM");
-                return redirect("/app?billing=success");
+
+                // Check if shop exists, if not we can't update (shop should be created during install)
+                const shop = await getShopByDomain(normalizedShop);
+                if (shop) {
+                    await updateShopPlan(normalizedShop, "PREMIUM");
+                    console.log(`Successfully updated ${normalizedShop} to PREMIUM via fallback`);
+                    return redirect("/app?billing=success");
+                } else {
+                    console.error(`Shop not found in database for fallback: ${normalizedShop}`);
+                    // Redirect to app to trigger re-authentication, then back to callback
+                    return redirect(`/app?billing=pending&shop=${encodeURIComponent(normalizedShop)}`);
+                }
             }
         } catch (fallbackError) {
             console.error("Fallback update also failed:", fallbackError);

@@ -23,6 +23,7 @@ import {
   InlineGrid,
   Tooltip,
   Spinner,
+  Divider,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import {
@@ -797,39 +798,103 @@ export default function Dashboard() {
         ]}
       >
         <Modal.Section>
-          <BlockStack gap="400">
-            <Text as="p" variant="bodyMd">
-              Unlock the full power of AnnounceFlow with Premium:
+          <BlockStack gap="500">
+            {/* Free Trial Banner */}
+            <Box
+              background="bg-surface-success"
+              padding="400"
+              borderRadius="200"
+            >
+              <BlockStack gap="100">
+                <Text as="p" variant="headingMd" fontWeight="bold">
+                  Start Your 7-Day Free Trial
+                </Text>
+                <Text as="p" variant="bodySm">
+                  Try Premium risk-free. Cancel anytime.
+                </Text>
+              </BlockStack>
+            </Box>
+
+            {/* Features Header */}
+            <Text as="p" variant="bodyMd" fontWeight="semibold">
+              Everything you need to boost conversions:
             </Text>
-            <BlockStack gap="200">
-              <InlineStack gap="200" blockAlign="center">
-                <Icon source={CheckCircleIcon} tone="success" />
-                <Text as="span" variant="bodyMd">Unlimited announcement bars</Text>
-              </InlineStack>
-              <InlineStack gap="200" blockAlign="center">
-                <Icon source={CheckCircleIcon} tone="success" />
-                <Text as="span" variant="bodyMd">Advanced targeting rules</Text>
-              </InlineStack>
-              <InlineStack gap="200" blockAlign="center">
-                <Icon source={CheckCircleIcon} tone="success" />
-                <Text as="span" variant="bodyMd">Detailed analytics & reports</Text>
-              </InlineStack>
-              <InlineStack gap="200" blockAlign="center">
-                <Icon source={CheckCircleIcon} tone="success" />
-                <Text as="span" variant="bodyMd">Email capture & integrations</Text>
-              </InlineStack>
-              <InlineStack gap="200" blockAlign="center">
-                <Icon source={CheckCircleIcon} tone="success" />
-                <Text as="span" variant="bodyMd">Priority support</Text>
-              </InlineStack>
-            </BlockStack>
-            <Box paddingBlockStart="200">
-              <Text as="p" variant="headingLg" fontWeight="bold">
-                $99.00/month
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                7-day free trial included
-              </Text>
+
+            {/* 2-Column Feature Grid */}
+            <InlineGrid columns={2} gap="300">
+              <Box
+                background="bg-surface-secondary"
+                padding="300"
+                borderRadius="200"
+              >
+                <InlineStack gap="200" blockAlign="center">
+                  <Icon source={CheckCircleIcon} tone="success" />
+                  <Text as="span" variant="bodySm">Unlimited Bars</Text>
+                </InlineStack>
+              </Box>
+              <Box
+                background="bg-surface-secondary"
+                padding="300"
+                borderRadius="200"
+              >
+                <InlineStack gap="200" blockAlign="center">
+                  <Icon source={CheckCircleIcon} tone="success" />
+                  <Text as="span" variant="bodySm">Email Capture</Text>
+                </InlineStack>
+              </Box>
+              <Box
+                background="bg-surface-secondary"
+                padding="300"
+                borderRadius="200"
+              >
+                <InlineStack gap="200" blockAlign="center">
+                  <Icon source={CheckCircleIcon} tone="success" />
+                  <Text as="span" variant="bodySm">Remove Branding</Text>
+                </InlineStack>
+              </Box>
+              <Box
+                background="bg-surface-secondary"
+                padding="300"
+                borderRadius="200"
+              >
+                <InlineStack gap="200" blockAlign="center">
+                  <Icon source={CheckCircleIcon} tone="success" />
+                  <Text as="span" variant="bodySm">All Bar Types</Text>
+                </InlineStack>
+              </Box>
+              <Box
+                background="bg-surface-secondary"
+                padding="300"
+                borderRadius="200"
+              >
+                <InlineStack gap="200" blockAlign="center">
+                  <Icon source={CheckCircleIcon} tone="success" />
+                  <Text as="span" variant="bodySm">Advanced Targeting</Text>
+                </InlineStack>
+              </Box>
+              <Box
+                background="bg-surface-secondary"
+                padding="300"
+                borderRadius="200"
+              >
+                <InlineStack gap="200" blockAlign="center">
+                  <Icon source={CheckCircleIcon} tone="success" />
+                  <Text as="span" variant="bodySm">Priority Support</Text>
+                </InlineStack>
+              </Box>
+            </InlineGrid>
+
+            {/* Pricing Section */}
+            <Divider />
+            <Box>
+              <BlockStack gap="100" inlineAlign="center">
+                <Text as="p" variant="bodySm" tone="subdued">
+                  After your free trial
+                </Text>
+                <Text as="p" variant="headingLg" fontWeight="bold">
+                  $99/month
+                </Text>
+              </BlockStack>
             </Box>
           </BlockStack>
         </Modal.Section>

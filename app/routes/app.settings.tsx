@@ -30,7 +30,6 @@ import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import {
   ExternalIcon,
   DeleteIcon,
-  ExportIcon,
 } from "@shopify/polaris-icons";
 
 import { authenticate } from "../shopify.server";
@@ -41,7 +40,6 @@ import {
 import {
   getShopByDomain,
   prisma,
-  exportSubscribersCSV,
   deleteAllSubscribers,
 } from "../lib/db.server";
 import {
@@ -117,9 +115,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "upgrade") {
     try {
       // Construct return URL (callback) - must use the billing callback endpoint
+      // Include shop parameter so callback can authenticate properly
       const url = new URL(request.url);
-      const returnUrl = `${url.origin}/api/billing/callback`;
-      
+      const returnUrl = `${url.origin}/api/billing/callback?shop=${encodeURIComponent(shopDomain)}`;
+
       const confirmationUrl = await createSubscription(admin, returnUrl);
       return json<ActionData>({
         success: true,
@@ -170,28 +169,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.error("Error saving settings:", error);
       return json<ActionData>(
         { success: false, error: "Failed to save settings" },
-        { status: 500 }
-      );
-    }
-  }
-
-  // Handle data export
-  if (intent === "export") {
-    try {
-      const shop = await getShopByDomain(shopDomain);
-      if (!shop) {
-        return json<ActionData>(
-          { success: false, error: "Shop not found" },
-          { status: 404 }
-        );
-      }
-
-      const csv = await exportSubscribersCSV(shop.id);
-      return json({ success: true, csv });
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      return json<ActionData>(
-        { success: false, error: "Failed to export data" },
         { status: 500 }
       );
     }
@@ -253,7 +230,6 @@ export default function Settings() {
 
   // Modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   // Loading states
   const isLoading = navigation.state === "loading";
@@ -268,8 +244,14 @@ export default function Settings() {
 
   // Position options
   const positionOptions = [
-    { label: "Top", value: "top" },
-    { label: "Bottom", value: "bottom" },
+    { label: "Top (Full Width)", value: "top" },
+    { label: "Bottom (Full Width)", value: "bottom" },
+    { label: "Left Side (Vertical)", value: "left" },
+    { label: "Right Side (Vertical)", value: "right" },
+    { label: "Top Left Corner", value: "top-left" },
+    { label: "Top Right Corner", value: "top-right" },
+    { label: "Bottom Left Corner", value: "bottom-left" },
+    { label: "Bottom Right Corner", value: "bottom-right" },
   ];
 
   // Handle action data response
@@ -316,44 +298,6 @@ export default function Settings() {
     formData.append("intent", "upgrade");
     submit(formData, { method: "post" });
   }, [submit]);
-
-  // Handle export
-  const handleExport = useCallback(async () => {
-    setIsExporting(true);
-
-    const formData = new FormData();
-    formData.append("intent", "export");
-
-    try {
-      const response = await fetch("/app/settings", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.csv) {
-        const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `announceflow_data_${new Date().toISOString().split("T")[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        shopify.toast.show("Data exported successfully");
-      } else {
-        shopify.toast.show(result.error || "Export failed", { isError: true });
-      }
-    } catch (error) {
-      console.error("Export error:", error);
-      shopify.toast.show("Export failed", { isError: true });
-    } finally {
-      setIsExporting(false);
-    }
-  }, [shopify]);
 
   // Handle delete all
   const handleDeleteAll = useCallback(() => {
@@ -570,28 +514,18 @@ export default function Settings() {
 
             <Divider />
 
-            <InlineStack gap="300">
-              <Button
-                icon={ExportIcon}
-                onClick={handleExport}
-                loading={isExporting}
-                disabled={stats.totalSubscribers === 0}
-              >
-                Export All Data
-              </Button>
-              <Button
-                icon={DeleteIcon}
-                tone="critical"
-                onClick={() => setDeleteModalOpen(true)}
-                disabled={stats.totalSubscribers === 0}
-              >
-                Delete All Data
-              </Button>
-            </InlineStack>
+            <Button
+              icon={DeleteIcon}
+              tone="critical"
+              onClick={() => setDeleteModalOpen(true)}
+              disabled={stats.totalSubscribers === 0}
+            >
+              Delete All Subscriber Data
+            </Button>
 
             {stats.totalSubscribers === 0 && (
               <Text as="p" variant="bodySm" tone="subdued">
-                No subscriber data to export or delete.
+                No subscriber data to delete.
               </Text>
             )}
           </BlockStack>

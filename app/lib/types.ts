@@ -13,7 +13,15 @@ export type BarType =
   | "cookie_consent";
 
 // Position Options
-export type BarPosition = "top" | "bottom";
+export type BarPosition =
+  | "top"
+  | "bottom"
+  | "left"
+  | "right"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
 
 // Font Size Options
 export type FontSize = "small" | "medium" | "large";

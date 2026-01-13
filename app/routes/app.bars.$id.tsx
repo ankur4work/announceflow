@@ -739,13 +739,22 @@ export default function EditBar() {
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">Style</Text>
                   <FormLayout>
-                    <InlineStack gap="400" align="start">
-                      <Box minWidth="100px"><Text as="span" variant="bodyMd">Position</Text></Box>
-                      <InlineStack gap="200">
-                        <Button pressed={position === "top"} onClick={() => setPosition("top")}>Top</Button>
-                        <Button pressed={position === "bottom"} onClick={() => setPosition("bottom")}>Bottom</Button>
-                      </InlineStack>
-                    </InlineStack>
+                    <Select
+                      label="Position"
+                      options={[
+                        { label: "Top (Full Width)", value: "top" },
+                        { label: "Bottom (Full Width)", value: "bottom" },
+                        { label: "Left Side (Vertical)", value: "left" },
+                        { label: "Right Side (Vertical)", value: "right" },
+                        { label: "Top Left Corner", value: "top-left" },
+                        { label: "Top Right Corner", value: "top-right" },
+                        { label: "Bottom Left Corner", value: "bottom-left" },
+                        { label: "Bottom Right Corner", value: "bottom-right" },
+                      ]}
+                      value={position}
+                      onChange={(value) => setPosition(value as BarPosition)}
+                      helpText="Where the bar appears on your store"
+                    />
 
                     <FormLayout.Group>
                       <ColorPicker

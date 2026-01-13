@@ -29,13 +29,12 @@ import {
   Icon,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
-import { ExportIcon, SearchIcon, DeleteIcon } from "@shopify/polaris-icons";
+import { SearchIcon, DeleteIcon } from "@shopify/polaris-icons";
 
 import { authenticate } from "../shopify.server";
 import {
   getSubscribersByShop,
   getShopByDomain,
-  exportSubscribersCSV,
   prisma,
 } from "../lib/db.server";
 import { hasActivePremiumPlan } from "../lib/billing.server";
@@ -223,19 +222,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === "export") {
-    try {
-      const csv = await exportSubscribersCSV(shop.id);
-      return json({ success: true, csv });
-    } catch (error) {
-      console.error("Error exporting subscribers:", error);
-      return json(
-        { success: false, error: "Failed to export subscribers" },
-        { status: 500 }
-      );
-    }
-  }
-
   return json({ success: false, error: "Unknown action" }, { status: 400 });
 };
 
@@ -283,7 +269,6 @@ export default function Subscribers() {
     null
   );
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   // Loading state
   const isLoading = navigation.state === "loading";
@@ -373,45 +358,6 @@ export default function Subscribers() {
     handleSelectionChange("page", false);
     shopify.toast.show(`${selectedResources.length} subscribers deleted`);
   }, [selectedResources, submit, shopify, handleSelectionChange]);
-
-  // Handle export
-  const handleExport = useCallback(async () => {
-    setIsExporting(true);
-
-    const formData = new FormData();
-    formData.append("intent", "export");
-
-    try {
-      const response = await fetch("/app/subscribers", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.csv) {
-        // Create and download CSV file
-        const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `subscribers_${new Date().toISOString().split("T")[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        shopify.toast.show("CSV exported successfully");
-      } else {
-        shopify.toast.show(result.error || "Export failed", { isError: true });
-      }
-    } catch (error) {
-      console.error("Export error:", error);
-      shopify.toast.show("Export failed", { isError: true });
-    } finally {
-      setIsExporting(false);
-    }
-  }, [shopify]);
 
   // Promoted bulk actions
   const promotedBulkActions = useMemo(
@@ -518,12 +464,6 @@ export default function Subscribers() {
                   <InlineStack gap="200">
                     <Badge tone="success">Included</Badge>
                     <Text as="span" variant="bodyMd">
-                      CSV export
-                    </Text>
-                  </InlineStack>
-                  <InlineStack gap="200">
-                    <Badge tone="success">Included</Badge>
-                    <Text as="span" variant="bodyMd">
                       Bulk operations
                     </Text>
                   </InlineStack>
@@ -614,19 +554,8 @@ export default function Subscribers() {
     <Page
       backAction={{ content: "Dashboard", onAction: () => navigate("/app") }}
       title="Email Subscribers"
-      primaryAction={{
-        content: isExporting ? "Exporting..." : "Export CSV",
-        icon: ExportIcon,
-        onAction: handleExport,
-        loading: isExporting,
-        disabled: stats.total === 0,
-      }}
     >
-      <TitleBar title="Email Subscribers">
-        <button onClick={handleExport} disabled={isExporting || stats.total === 0}>
-          {isExporting ? "Exporting..." : "Export CSV"}
-        </button>
-      </TitleBar>
+      <TitleBar title="Email Subscribers" />
 
       <BlockStack gap="500">
         {/* Stats Cards */}

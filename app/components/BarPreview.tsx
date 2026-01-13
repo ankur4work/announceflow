@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Card, BlockStack, InlineStack, Text, Box, Button, ButtonGroup } from "@shopify/polaris";
 import { DesktopIcon, MobileIcon } from "@shopify/polaris-icons";
-import type { BarType } from "../lib/types";
+import type { BarType, BarPosition } from "../lib/types";
 
 // Props interface
 interface BarPreviewProps {
@@ -28,7 +28,7 @@ interface BarPreviewProps {
         shippingSuccessMessage?: string;
     };
     style: {
-        position: "top" | "bottom";
+        position: BarPosition;
         bgColor: string;
         textColor: string;
         fontSize: "small" | "medium" | "large";
@@ -45,6 +45,21 @@ interface BarPreviewProps {
     };
     isPremium?: boolean;
 }
+
+// Get position label for display
+const getPositionLabel = (position: BarPosition): string => {
+    const labels: Record<BarPosition, string> = {
+        top: "Top of page",
+        bottom: "Bottom of page",
+        left: "Left side",
+        right: "Right side",
+        "top-left": "Top left corner",
+        "top-right": "Top right corner",
+        "bottom-left": "Bottom left corner",
+        "bottom-right": "Bottom right corner",
+    };
+    return labels[position] || position;
+};
 
 // Get font size in pixels
 const getFontSizePx = (size: string): number => {
@@ -547,14 +562,43 @@ export function BarPreview({
                             {/* Top position bar */}
                             {style.position === "top" && renderBarContent()}
 
-                            {/* Store content placeholder */}
+                            {/* Store content placeholder with relative positioning for corner/side bars */}
                             <div
                                 style={{
                                     padding: isMobile ? "16px" : "24px",
                                     minHeight: isMobile ? "120px" : "150px",
                                     backgroundColor: "#fff",
+                                    position: "relative",
                                 }}
                             >
+                                {/* Corner and side positioned bars */}
+                                {(style.position === "top-left" || style.position === "top-right" ||
+                                  style.position === "bottom-left" || style.position === "bottom-right" ||
+                                  style.position === "left" || style.position === "right") && (
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            ...(style.position === "top-left" && { top: "10px", left: "10px" }),
+                                            ...(style.position === "top-right" && { top: "10px", right: "10px" }),
+                                            ...(style.position === "bottom-left" && { bottom: "10px", left: "10px" }),
+                                            ...(style.position === "bottom-right" && { bottom: "10px", right: "10px" }),
+                                            ...(style.position === "left" && { left: "0", top: "50%", transform: "translateY(-50%)" }),
+                                            ...(style.position === "right" && { right: "0", top: "50%", transform: "translateY(-50%)" }),
+                                            maxWidth: (style.position === "left" || style.position === "right") ? "auto" : "280px",
+                                            zIndex: 10,
+                                            borderRadius: "8px",
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                                            overflow: "hidden",
+                                            ...(style.position === "left" || style.position === "right" ? {
+                                                writingMode: "vertical-rl",
+                                                textOrientation: "mixed",
+                                            } : {}),
+                                        }}
+                                    >
+                                        {renderBarContent()}
+                                    </div>
+                                )}
+
                                 <div
                                     style={{
                                         height: "16px",
@@ -601,7 +645,7 @@ export function BarPreview({
                 {/* Position indicator */}
                 <InlineStack align="center">
                     <Text as="span" variant="bodySm" tone="subdued">
-                        Position: {style.position === "top" ? "Top of page" : "Bottom of page"}
+                        Position: {getPositionLabel(style.position)}
                         {" • "}
                         Font: {style.fontSize}
                         {!isPremium && " • Free plan (with branding)"}

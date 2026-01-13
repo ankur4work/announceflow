@@ -42,6 +42,255 @@
   transform: translateY(0);
 }
 
+/* Side Position - Left */
+.announceflow-bar--left {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  width: auto;
+  max-width: 300px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 20px var(--af-padding-y);
+  border-radius: 0 8px 8px 0;
+}
+
+.announceflow-bar--left.announceflow-bar--visible {
+  transform: translateY(-50%) translateX(0);
+}
+
+.announceflow-bar--left .announceflow-bar__inner {
+  flex-direction: column;
+}
+
+.announceflow-bar--left .announceflow-bar__content {
+  flex-direction: column;
+}
+
+.announceflow-bar--left .announceflow-bar__close {
+  position: relative;
+  right: auto;
+  top: auto;
+  transform: none;
+  margin-top: 8px;
+}
+
+/* Side Position - Right */
+.announceflow-bar--right {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(100%);
+  width: auto;
+  max-width: 300px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 20px var(--af-padding-y);
+  border-radius: 8px 0 0 8px;
+}
+
+.announceflow-bar--right.announceflow-bar--visible {
+  transform: translateY(-50%) translateX(0);
+}
+
+.announceflow-bar--right .announceflow-bar__inner {
+  flex-direction: column;
+}
+
+.announceflow-bar--right .announceflow-bar__content {
+  flex-direction: column;
+}
+
+.announceflow-bar--right .announceflow-bar__close {
+  position: relative;
+  right: auto;
+  top: auto;
+  transform: none;
+  margin-top: 8px;
+}
+
+/* Corner Position - Top Left */
+.announceflow-bar--top-left {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  right: auto;
+  width: auto;
+  max-width: 350px;
+  transform: translateX(-120%) translateY(-20px);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.announceflow-bar--top-left.announceflow-bar--visible {
+  transform: translateX(0) translateY(0);
+}
+
+/* Corner Position - Top Right */
+.announceflow-bar--top-right {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  left: auto;
+  width: auto;
+  max-width: 350px;
+  transform: translateX(120%) translateY(-20px);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.announceflow-bar--top-right.announceflow-bar--visible {
+  transform: translateX(0) translateY(0);
+}
+
+/* Corner Position - Bottom Left */
+.announceflow-bar--bottom-left {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: auto;
+  width: auto;
+  max-width: 350px;
+  transform: translateX(-120%) translateY(20px);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.announceflow-bar--bottom-left.announceflow-bar--visible {
+  transform: translateX(0) translateY(0);
+}
+
+/* Corner Position - Bottom Right */
+.announceflow-bar--bottom-right {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  left: auto;
+  width: auto;
+  max-width: 350px;
+  transform: translateX(120%) translateY(20px);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.announceflow-bar--bottom-right.announceflow-bar--visible {
+  transform: translateX(0) translateY(0);
+}
+
+/* Corner positions - close button positioning */
+.announceflow-bar--top-left .announceflow-bar__close,
+.announceflow-bar--top-right .announceflow-bar__close,
+.announceflow-bar--bottom-left .announceflow-bar__close,
+.announceflow-bar--bottom-right .announceflow-bar__close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  transform: none;
+}
+
+/* Side and corner positions - inner padding adjustment */
+.announceflow-bar--top-left .announceflow-bar__inner,
+.announceflow-bar--top-right .announceflow-bar__inner,
+.announceflow-bar--bottom-left .announceflow-bar__inner,
+.announceflow-bar--bottom-right .announceflow-bar__inner {
+  padding-right: 28px;
+}
+
+/* Dismissing animation for new positions */
+.announceflow-bar--left.announceflow-bar--dismissing {
+  transform: translateY(-50%) translateX(-100%);
+}
+
+.announceflow-bar--right.announceflow-bar--dismissing {
+  transform: translateY(-50%) translateX(100%);
+}
+
+.announceflow-bar--top-left.announceflow-bar--dismissing {
+  transform: translateX(-120%) translateY(-20px);
+}
+
+.announceflow-bar--top-right.announceflow-bar--dismissing {
+  transform: translateX(120%) translateY(-20px);
+}
+
+.announceflow-bar--bottom-left.announceflow-bar--dismissing {
+  transform: translateX(-120%) translateY(20px);
+}
+
+.announceflow-bar--bottom-right.announceflow-bar--dismissing {
+  transform: translateX(120%) translateY(20px);
+}
+
+/* Mobile adjustments for corner positions */
+@media screen and (max-width: 576px) {
+  .announceflow-bar--top-left,
+  .announceflow-bar--top-right,
+  .announceflow-bar--bottom-left,
+  .announceflow-bar--bottom-right {
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+  }
+
+  .announceflow-bar--top-left,
+  .announceflow-bar--top-right {
+    top: 10px;
+  }
+
+  .announceflow-bar--bottom-left,
+  .announceflow-bar--bottom-right {
+    bottom: 10px;
+  }
+
+  /* Side positions become horizontal on mobile */
+  .announceflow-bar--left,
+  .announceflow-bar--right {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    writing-mode: horizontal-tb;
+    text-orientation: initial;
+    padding: var(--af-padding-y) 20px;
+    border-radius: 0;
+    transform: translateY(100%);
+  }
+
+  .announceflow-bar--left.announceflow-bar--visible,
+  .announceflow-bar--right.announceflow-bar--visible {
+    transform: translateY(0);
+  }
+
+  .announceflow-bar--left .announceflow-bar__inner,
+  .announceflow-bar--right .announceflow-bar__inner {
+    flex-direction: row;
+  }
+
+  .announceflow-bar--left .announceflow-bar__content,
+  .announceflow-bar--right .announceflow-bar__content {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .announceflow-bar--left .announceflow-bar__close,
+  .announceflow-bar--right .announceflow-bar__close {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-top: 0;
+  }
+
+  .announceflow-bar--left.announceflow-bar--dismissing,
+  .announceflow-bar--right.announceflow-bar--dismissing {
+    transform: translateY(100%);
+  }
+}
+
 /* Sticky Behavior */
 .announceflow-bar--sticky.announceflow-bar--top {
   position: sticky;

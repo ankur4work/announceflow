@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useActionData, useNavigate, useSubmit, useNavigation, useBlocker } from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigate, useSubmit, useNavigation, useBlocker } from "@remix-run/react";
 import { useState, useCallback, useEffect } from "react";
 import {
   Page,
@@ -25,8 +25,8 @@ import {
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 
 import { authenticate } from "../shopify.server";
-import { createBar } from "../lib/metafields.server";
-import type { BarType, BarPosition, FontSize, CTAStyle } from "../lib/types";
+import { createBar, getBarsConfig } from "../lib/metafields.server";
+import type { BarType, BarPosition, FontSize, CTAStyle, GlobalSettings } from "../lib/types";
 import { ColorPicker, FontSizeSelector, BarPreview } from "../components";
 
 // Form data type
@@ -90,9 +90,19 @@ interface FormErrors {
   shippingThreshold?: string;
 }
 
+interface LoaderData {
+  globalSettings: GlobalSettings;
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-  return json({});
+  const { admin } = await authenticate.admin(request);
+
+  // Get global settings to use defaults for new bar
+  const barsConfig = await getBarsConfig(admin);
+
+  return json<LoaderData>({
+    globalSettings: barsConfig.global_settings,
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -306,12 +316,13 @@ const isValidUrl = (url: string): boolean => {
 };
 
 export default function CreateBar() {
+  const { globalSettings } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const submit = useSubmit();
   const actionData = useActionData<typeof action>();
   const shopify = useAppBridge();
 
-  // Form state
+  // Form state - use global settings for defaults
   const [formData, setFormData] = useState<FormData>({
     type: "promotional",
     content: {
@@ -320,9 +331,9 @@ export default function CreateBar() {
       ctaLink: "",
     },
     style: {
-      position: "top",
-      bgColor: "#1E3A5F",
-      textColor: "#FFFFFF",
+      position: globalSettings.default_position || "top",
+      bgColor: globalSettings.default_bg_color || "#1E3A5F",
+      textColor: globalSettings.default_text_color || "#FFFFFF",
       fontSize: "medium",
       buttonBgColor: "#E74C3C",
       buttonTextColor: "#FFFFFF",
@@ -812,28 +823,22 @@ export default function CreateBar() {
                   </Text>
                   <FormLayout>
                     {/* Position */}
-                    <BlockStack gap="200">
-                      <Text as="span" variant="bodyMd">
-                        Position
-                      </Text>
-                      <ButtonGroup variant="segmented">
-                        <Button
-                          pressed={formData.style.position === "top"}
-                          onClick={() => updateField("style", "position", "top")}
-                        >
-                          Top
-                        </Button>
-                        <Button
-                          pressed={formData.style.position === "bottom"}
-                          onClick={() => updateField("style", "position", "bottom")}
-                        >
-                          Bottom
-                        </Button>
-                      </ButtonGroup>
-                      <Text as="span" variant="bodySm" tone="subdued">
-                        {formData.type === "cookie_consent" ? "Recommended: Bottom for cookie consent" : "Where the bar appears on your store"}
-                      </Text>
-                    </BlockStack>
+                    <Select
+                      label="Position"
+                      options={[
+                        { label: "Top (Full Width)", value: "top" },
+                        { label: "Bottom (Full Width)", value: "bottom" },
+                        { label: "Left Side (Vertical)", value: "left" },
+                        { label: "Right Side (Vertical)", value: "right" },
+                        { label: "Top Left Corner", value: "top-left" },
+                        { label: "Top Right Corner", value: "top-right" },
+                        { label: "Bottom Left Corner", value: "bottom-left" },
+                        { label: "Bottom Right Corner", value: "bottom-right" },
+                      ]}
+                      value={formData.style.position}
+                      onChange={(value) => updateField("style", "position", value as BarPosition)}
+                      helpText={formData.type === "cookie_consent" ? "Recommended: Bottom for cookie consent" : "Where the bar appears on your store"}
+                    />
 
                     {/* Colors */}
                     <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
