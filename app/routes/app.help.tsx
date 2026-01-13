@@ -506,8 +506,7 @@ export default function Help() {
               </Text>
 
               <BlockStack gap="200">
-                <InlineStack gap="100" blockAlign="center">
-                  <Icon source={EmailIcon} tone="base" />
+                <InlineStack gap="200" blockAlign="center">
                   <Text as="span" variant="bodyMd" fontWeight="semibold">
                     Email:
                   </Text>
@@ -516,8 +515,7 @@ export default function Help() {
                   </Link>
                 </InlineStack>
 
-                <InlineStack gap="100" blockAlign="center">
-                  <Icon source={ClockIcon} tone="base" />
+                <InlineStack gap="200" blockAlign="center">
                   <Text as="span" variant="bodyMd" fontWeight="semibold">
                     Response time:
                   </Text>
