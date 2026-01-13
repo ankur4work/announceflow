@@ -16,8 +16,21 @@ export const PLAN_NAME = "AnnounceFlow Premium";
 export const PLAN_PRICE = 99.00;
 export const CURRENCY_CODE = "USD";
 
+// Determine if we should use test mode
+// Test mode is enabled if:
+//   1. NODE_ENV is NOT "production" (default for development), OR
+//   2. BILLING_TEST_MODE is explicitly set to "true"
+// This ensures test mode is ALWAYS used in development
+const USE_TEST_MODE = 
+    process.env.NODE_ENV !== "production" || 
+    process.env.BILLING_TEST_MODE === "true";
+
+// Log the test mode status for debugging (always log to help diagnose issues)
+console.log(`[Billing] Configuration - Test mode: ${USE_TEST_MODE}, NODE_ENV: ${process.env.NODE_ENV || 'undefined'}, BILLING_TEST_MODE: ${process.env.BILLING_TEST_MODE || 'undefined'}`);
+
 // GraphQL Mutations & Queries
-const APP_SUBSCRIPTION_CREATE = `#graphql
+// Create two versions: one with test mode, one without
+const APP_SUBSCRIPTION_CREATE_WITH_TEST = `#graphql
   mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $amount: Decimal!) {
     appSubscriptionCreate(
       name: $name
@@ -35,6 +48,34 @@ const APP_SUBSCRIPTION_CREATE = `#graphql
       appSubscription {
         id
         status
+      }
+      confirmationUrl
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+const APP_SUBSCRIPTION_CREATE_PRODUCTION = `#graphql
+  mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $amount: Decimal!) {
+    appSubscriptionCreate(
+      name: $name
+      returnUrl: $returnUrl
+      lineItems: [{
+        plan: {
+          appRecurringPricingDetails: {
+            price: { amount: $amount, currencyCode: USD }
+            interval: EVERY_30_DAYS
+          }
+        }
+      }]
+    ) {
+      appSubscription {
+        id
+        status
+        test
       }
       confirmationUrl
       userErrors {
@@ -65,23 +106,110 @@ export async function createSubscription(
     admin: AdminClient,
     returnUrl: string
 ): Promise<string> {
-    const response = await admin.graphql(APP_SUBSCRIPTION_CREATE, {
-        variables: {
+    try {
+        // Build variables object
+        const variables = {
             name: PLAN_NAME,
             returnUrl,
             amount: PLAN_PRICE,
-        },
-    });
+        };
+        
+        // Use the appropriate query based on test mode
+        const query = USE_TEST_MODE 
+            ? APP_SUBSCRIPTION_CREATE_WITH_TEST 
+            : APP_SUBSCRIPTION_CREATE_PRODUCTION;
 
-    const responseJson = await response.json();
-    const data = responseJson.data?.appSubscriptionCreate;
+        // Log which query is being used
+        console.log(`[Billing] Creating subscription with test mode: ${USE_TEST_MODE}`);
+        console.log(`[Billing] Using ${USE_TEST_MODE ? 'TEST' : 'PRODUCTION'} query`);
 
-    if (data?.userErrors?.length > 0) {
-        console.error("Billing error:", data.userErrors);
-        throw new Error(data.userErrors.map((e: any) => e.message).join(", "));
+        const response = await admin.graphql(query, {
+            variables,
+        });
+
+        const responseJson = await response.json();
+        
+        // Check for GraphQL errors
+        if (responseJson.errors) {
+            console.error("GraphQL errors in createSubscription:", responseJson.errors);
+            const errorMessages = responseJson.errors.map((e: any) => e.message).join(", ");
+            
+            // If we get a distribution error and we're not in test mode, provide helpful message
+            if (errorMessages.includes("public distribution") || errorMessages.includes("Billing API") || errorMessages.includes("without a public distribution")) {
+                // If we're in development but test mode wasn't used, that's a bug
+                if (process.env.NODE_ENV !== "production" && !USE_TEST_MODE) {
+                    console.error("[Billing] ERROR: In development but test mode was not enabled! This should not happen.");
+                    throw new Error(
+                        "Billing test mode error: The app is in development but test mode was not enabled. " +
+                        "Please check your environment configuration. NODE_ENV=" + (process.env.NODE_ENV || "undefined")
+                    );
+                }
+                
+                // If we ARE using test mode but still get this error, it might be a Shopify API issue
+                if (USE_TEST_MODE) {
+                    throw new Error(
+                        "Billing API error: Even with test mode enabled, Shopify requires the app to be in a development store context. " +
+                        "Make sure you're testing on a development store. " +
+                        "If this persists, the app may need to be published to the Shopify App Store for production use."
+                    );
+                }
+                
+                throw new Error(
+                    "Billing API requires the app to be published to the Shopify App Store for production use. " +
+                    "For development, ensure you're using a development store and test mode is enabled."
+                );
+            }
+            
+            throw new Error(errorMessages);
+        }
+        
+        const data = responseJson.data?.appSubscriptionCreate;
+
+        if (data?.userErrors?.length > 0) {
+            console.error("Billing userErrors:", data.userErrors);
+            const errorMessages = data.userErrors.map((e: any) => e.message).join(", ");
+            
+            // If we get a distribution error and we're not in test mode, provide helpful message
+            if (errorMessages.includes("public distribution") || errorMessages.includes("Billing API") || errorMessages.includes("without a public distribution")) {
+                // If we're in development but test mode wasn't used, that's a bug
+                if (process.env.NODE_ENV !== "production" && !USE_TEST_MODE) {
+                    console.error("[Billing] ERROR: In development but test mode was not enabled! This should not happen.");
+                    throw new Error(
+                        "Billing test mode error: The app is in development but test mode was not enabled. " +
+                        "Please check your environment configuration. NODE_ENV=" + (process.env.NODE_ENV || "undefined")
+                    );
+                }
+                
+                // If we ARE using test mode but still get this error, it might be a Shopify API issue
+                if (USE_TEST_MODE) {
+                    throw new Error(
+                        "Billing API error: Even with test mode enabled, Shopify requires the app to be in a development store context. " +
+                        "Make sure you're testing on a development store. " +
+                        "If this persists, the app may need to be published to the Shopify App Store for production use."
+                    );
+                }
+                
+                throw new Error(
+                    "Billing API requires the app to be published to the Shopify App Store for production use. " +
+                    "For development, ensure you're using a development store and test mode is enabled."
+                );
+            }
+            
+            throw new Error(errorMessages);
+        }
+
+        if (!data?.confirmationUrl) {
+            throw new Error("No confirmation URL returned from billing API");
+        }
+
+        return data.confirmationUrl;
+    } catch (error) {
+        console.error("Error creating subscription:", error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error("Failed to create subscription");
     }
-
-    return data.confirmationUrl;
 }
 
 /**

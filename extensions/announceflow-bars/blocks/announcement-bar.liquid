@@ -6,138 +6,104 @@
 
 {{ 'announceflow.css' | asset_url | stylesheet_tag }}
 
+{% comment %} Pass shop domain to JavaScript for email subscriptions {% endcomment %}
+<script>
+  window.announceflowShopDomain = '{{ shop.permanent_domain }}';
+</script>
+
 {% liquid
   assign metafield_config = shop.metafields.announceflow.bars_config.value
-  assign active_bar = null
-
-  if metafield_config != blank
+  assign has_metafield_bars = false
+  
+  if metafield_config != blank and metafield_config.bars != blank
     assign bars_data = metafield_config.bars
-    for bar in bars_data
-      if bar.enabled == true
-        assign active_bar = bar
-        break
-      endif
-    endfor
-  endif
-
-  if active_bar != null
-    assign bar_id = 'announceflow-bar-' | append: active_bar.id
-    assign bar_type = active_bar.type | default: 'promotional'
-    assign message = active_bar.content.text
-    assign cta_text = active_bar.content.cta_text
-    assign cta_link = active_bar.content.cta_link
-    assign cta_style = active_bar.content.cta_style | default: 'primary'
-    assign end_datetime = active_bar.content.end_datetime
-    assign expired_text = active_bar.content.expired_text | default: 'This offer has ended'
-    assign bg_color = active_bar.style.bg_color | default: '#000000'
-    assign text_color = active_bar.style.text_color | default: '#FFFFFF'
-    assign button_bg_color = active_bar.style.button_bg_color | default: text_color
-    assign button_text_color = active_bar.style.button_text_color | default: bg_color
-    assign progress_color = active_bar.style.progress_color | default: text_color
-    assign progress_bg_color = active_bar.style.progress_bg_color | default: 'rgba(255,255,255,0.3)'
-    assign position = active_bar.style.position | default: 'top'
-    assign sticky = active_bar.style.sticky | default: false
-    assign font_size = active_bar.style.font_size | default: 'medium'
-    assign padding_y = active_bar.style.padding_vertical | default: 12
-    assign dismissible = active_bar.settings.dismissible | default: true
-    assign hide_when_expired = active_bar.settings.hide_when_expired | default: false
-    assign show_decline = active_bar.settings.show_decline | default: true
-    assign show_progress_bar = active_bar.settings.show_progress_bar | default: true
-    assign show_cta = false
-    if cta_text != blank and cta_link != blank
-      assign show_cta = true
-    endif
-    assign data_source = 'metafield'
-    assign bar_unique_id = active_bar.id
-
-    comment
-      Email Capture specific fields
-    endcomment
-    assign email_placeholder = active_bar.content.placeholder | default: 'Enter your email'
-    assign email_button_text = active_bar.content.button_text | default: 'Subscribe'
-    assign email_success_message = active_bar.content.success_message | default: 'Thanks! Check your inbox.'
-    assign email_error_message = active_bar.content.error_message | default: 'Please enter a valid email'
-
-    comment
-      Cookie Consent specific fields
-    endcomment
-    assign accept_text = active_bar.content.accept_text | default: 'Accept'
-    assign decline_text = active_bar.content.decline_text | default: 'Decline'
-    assign privacy_link = active_bar.content.privacy_link | default: '/pages/privacy-policy'
-    assign privacy_text = active_bar.content.privacy_text | default: 'Learn more'
-
-    comment
-      Free Shipping specific fields
-    endcomment
-    assign shipping_threshold = active_bar.content.threshold | default: 50
-    assign shipping_currency = active_bar.content.currency | default: 'USD'
-    assign shipping_message_template = active_bar.content.message_template | default: 'Spend {remaining} more for FREE shipping!'
-    assign shipping_success_message = active_bar.content.success_message | default: "You've unlocked FREE shipping!"
-  else
-    assign bar_id = 'announceflow-bar-' | append: block.id
-    assign bar_type = 'promotional'
-    assign message = block.settings.message
-    assign cta_text = block.settings.cta_text
-    assign cta_link = block.settings.cta_link
-    assign cta_style = 'primary'
-    assign end_datetime = ''
-    assign expired_text = 'This offer has ended'
-    assign bg_color = block.settings.background_color
-    assign text_color = block.settings.text_color
-    assign button_bg_color = text_color
-    assign button_text_color = bg_color
-    assign progress_color = text_color
-    assign progress_bg_color = 'rgba(255,255,255,0.3)'
-    assign position = block.settings.position
-    assign sticky = block.settings.sticky
-    assign font_size = '14px'
-    assign padding_y = 12
-    assign dismissible = block.settings.dismissible
-    assign hide_when_expired = false
-    assign show_decline = true
-    assign show_progress_bar = true
-    assign show_cta = block.settings.show_cta
-    assign data_source = 'settings'
-    assign bar_unique_id = block.id
-    assign email_placeholder = 'Enter your email'
-    assign email_button_text = 'Subscribe'
-    assign email_success_message = 'Thanks! Check your inbox.'
-    assign email_error_message = 'Please enter a valid email'
-    assign accept_text = 'Accept'
-    assign decline_text = 'Decline'
-    assign privacy_link = '/pages/privacy-policy'
-    assign privacy_text = 'Learn more'
-    assign shipping_threshold = 50
-    assign shipping_currency = 'USD'
-    assign shipping_message_template = 'Spend {remaining} more for FREE shipping!'
-    assign shipping_success_message = "You've unlocked FREE shipping!"
-  endif
-
-  if data_source == 'metafield'
-    case font_size
-      when 'small'
-        assign font_size_px = 12
-      when 'large'
-        assign font_size_px = 18
-      else
-        assign font_size_px = 14
-    endcase
-  else
-    assign font_size_px = font_size | remove: 'px' | plus: 0
+    assign has_metafield_bars = true
   endif
 %}
 
-{% comment %}
-  Render bar based on type - some types (cookie_consent, email_signup) may show even without message
-{% endcomment %}
-{% assign should_render = false %}
-{% if message != blank %}
-  {% assign should_render = true %}
-{% elsif bar_type == 'cookie_consent' or bar_type == 'email_signup' or bar_type == 'free_shipping' %}
-  {% assign should_render = true %}
-{% endif %}
+{% comment %} Render all enabled bars from metafield {% endcomment %}
+{% if has_metafield_bars %}
+  {% for bar in bars_data %}
+    {% if bar.enabled == true %}
+      {% liquid
+        assign bar_id = 'announceflow-bar-' | append: bar.id
+        assign bar_type = bar.type | default: 'promotional'
+        assign message = bar.content.text
+        assign cta_text = bar.content.cta_text
+        assign cta_link = bar.content.cta_link
+        assign cta_style = bar.content.cta_style | default: 'primary'
+        assign end_datetime = bar.content.end_datetime
+        assign expired_text = bar.content.expired_text | default: 'This offer has ended'
+        assign bg_color = bar.style.bg_color | default: '#000000'
+        assign text_color = bar.style.text_color | default: '#FFFFFF'
+        assign button_bg_color = bar.style.button_bg_color | default: text_color
+        assign button_text_color = bar.style.button_text_color | default: bg_color
+        assign progress_color = bar.style.progress_color | default: text_color
+        assign progress_bg_color = bar.style.progress_bg_color | default: 'rgba(255,255,255,0.3)'
+        assign position = bar.style.position | default: 'top'
+        assign sticky = bar.style.sticky | default: false
+        assign font_size = bar.style.font_size | default: 'medium'
+        assign padding_y = bar.style.padding_vertical | default: 12
+        assign dismissible = bar.settings.dismissible | default: true
+        assign hide_when_expired = bar.settings.hide_when_expired | default: false
+        assign show_decline = bar.settings.show_decline | default: true
+        assign show_progress_bar = bar.settings.show_progress_bar | default: true
+        assign show_cta = false
+        if cta_text != blank and cta_link != blank
+          assign show_cta = true
+        endif
+        assign data_source = 'metafield'
+        assign bar_unique_id = bar.id
 
-{% if should_render %}
+        comment
+          Email Capture specific fields
+        endcomment
+        assign email_placeholder = bar.content.placeholder | default: 'Enter your email'
+        assign email_button_text = bar.content.button_text | default: 'Subscribe'
+        assign email_success_message = bar.content.success_message | default: 'Thanks! Check your inbox.'
+        assign email_error_message = bar.content.error_message | default: 'Please enter a valid email'
+
+        comment
+          Cookie Consent specific fields
+        endcomment
+        assign accept_text = bar.content.accept_text | default: 'Accept'
+        assign decline_text = bar.content.decline_text | default: 'Decline'
+        assign privacy_link = bar.content.privacy_link | default: '/pages/privacy-policy'
+        assign privacy_text = bar.content.privacy_text | default: 'Learn more'
+
+        comment
+          Free Shipping specific fields
+        endcomment
+        assign shipping_threshold = bar.content.threshold | default: 50
+        assign shipping_currency = bar.content.currency | default: 'USD'
+        assign shipping_message_template = bar.content.message_template | default: 'Spend {remaining} more for FREE shipping!'
+        assign shipping_success_message = bar.content.success_message | default: "You've unlocked FREE shipping!"
+
+        if data_source == 'metafield'
+          case font_size
+            when 'small'
+              assign font_size_px = 12
+            when 'large'
+              assign font_size_px = 18
+            else
+              assign font_size_px = 14
+          endcase
+        else
+          assign font_size_px = font_size | remove: 'px' | plus: 0
+        endif
+      %}
+
+      {% comment %}
+        Render bar based on type - some types (cookie_consent, email_signup) may show even without message
+      {% endcomment %}
+      {% assign should_render = false %}
+      {% if message != blank %}
+        {% assign should_render = true %}
+      {% elsif bar_type == 'cookie_consent' or bar_type == 'email_signup' or bar_type == 'free_shipping' %}
+        {% assign should_render = true %}
+      {% endif %}
+
+      {% if should_render %}
   <div
     id="{{ bar_id }}"
     class="announceflow-bar announceflow-bar--{{ position }} announceflow-bar--{{ bar_type }}{% if sticky %} announceflow-bar--sticky{% endif %}"
@@ -279,6 +245,90 @@
       {% endif %}
     </div>
   </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% else %}
+  {% comment %} Fallback to block settings if no metafield bars {% endcomment %}
+  {% liquid
+    assign bar_id = 'announceflow-bar-' | append: block.id
+    assign bar_type = 'promotional'
+    assign message = block.settings.message
+    assign cta_text = block.settings.cta_text
+    assign cta_link = block.settings.cta_link
+    assign cta_style = 'primary'
+    assign end_datetime = ''
+    assign expired_text = 'This offer has ended'
+    assign bg_color = block.settings.background_color
+    assign text_color = block.settings.text_color
+    assign button_bg_color = text_color
+    assign button_text_color = bg_color
+    assign progress_color = text_color
+    assign progress_bg_color = 'rgba(255,255,255,0.3)'
+    assign position = block.settings.position
+    assign sticky = block.settings.sticky
+    assign font_size = '14px'
+    assign padding_y = 12
+    assign dismissible = block.settings.dismissible
+    assign hide_when_expired = false
+    assign show_decline = true
+    assign show_progress_bar = true
+    assign show_cta = block.settings.show_cta
+    assign data_source = 'settings'
+    assign bar_unique_id = block.id
+    assign email_placeholder = 'Enter your email'
+    assign email_button_text = 'Subscribe'
+    assign email_success_message = 'Thanks! Check your inbox.'
+    assign email_error_message = 'Please enter a valid email'
+    assign accept_text = 'Accept'
+    assign decline_text = 'Decline'
+    assign privacy_link = '/pages/privacy-policy'
+    assign privacy_text = 'Learn more'
+    assign shipping_threshold = 50
+    assign shipping_currency = 'USD'
+    assign shipping_message_template = 'Spend {remaining} more for FREE shipping!'
+    assign shipping_success_message = "You've unlocked FREE shipping!"
+    assign font_size_px = font_size | remove: 'px' | plus: 0
+  %}
+  
+  {% assign should_render = false %}
+  {% if message != blank %}
+    {% assign should_render = true %}
+  {% elsif bar_type == 'cookie_consent' or bar_type == 'email_signup' or bar_type == 'free_shipping' %}
+    {% assign should_render = true %}
+  {% endif %}
+
+  {% if should_render %}
+    <div
+      id="{{ bar_id }}"
+      class="announceflow-bar announceflow-bar--{{ position }} announceflow-bar--{{ bar_type }}{% if sticky %} announceflow-bar--sticky{% endif %}"
+      style="--af-bg: {{ bg_color }}; --af-text: {{ text_color }}; --af-font-size: {{ font_size_px }}px; --af-padding-y: {{ padding_y }}px; --af-btn-bg: {{ button_bg_color }}; --af-btn-text: {{ button_text_color }}; --af-progress-color: {{ progress_color }}; --af-progress-bg: {{ progress_bg_color }};"
+      role="banner"
+      aria-label="Store announcement"
+      data-announceflow-bar
+      data-bar-id="{{ bar_unique_id }}"
+      data-bar-type="{{ bar_type }}"
+      data-source="{{ data_source }}"
+    >
+      <div class="announceflow-bar__inner">
+        <div class="announceflow-bar__content">
+          {% if bar_type == 'promotional' or bar_type == 'announcement' %}
+            <p class="announceflow-bar__message">{{- message -}}</p>
+            {% if show_cta and cta_text != blank %}
+              <a href="{{ cta_link }}" class="announceflow-bar__cta announceflow-bar__cta--{{ cta_style }}">{{- cta_text -}}</a>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% if dismissible %}
+          <button type="button" class="announceflow-bar__close" aria-label="Close announcement" data-announceflow-dismiss="{{ bar_id }}">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 {% endif %}
 
 <script>
@@ -539,11 +589,59 @@
       if (submitBtn) submitBtn.disabled = true;
       if (errorMsg) errorMsg.style.display = 'none';
 
+      // Get shop domain from current page
+      // Try multiple methods to get shop domain
+      var shopDomain = null;
+      
+      // Method 1: From window.announceflowShopDomain (set by Liquid)
+      if (typeof window.announceflowShopDomain !== 'undefined' && window.announceflowShopDomain) {
+        shopDomain = window.announceflowShopDomain;
+      }
+      
+      // Method 2: From window.Shopify object (if available)
+      if (!shopDomain && window.Shopify && window.Shopify.shop) {
+        shopDomain = window.Shopify.shop;
+      }
+      
+      // Method 3: From meta tag
+      if (!shopDomain) {
+        var metaShop = document.querySelector('meta[name="shopify-checkout-shop"]');
+        if (metaShop) {
+          shopDomain = metaShop.getAttribute('content');
+        }
+      }
+      
+      // Method 4: Extract from hostname (fallback)
+      if (!shopDomain) {
+        var hostname = window.location.hostname;
+        // If it's a myshopify.com domain, use it directly
+        if (hostname.includes('.myshopify.com')) {
+          shopDomain = hostname;
+        } else {
+          // For custom domains, try to construct myshopify.com domain
+          console.warn('Could not determine shop domain, using hostname as fallback');
+          shopDomain = hostname;
+        }
+      }
+      
+      if (!shopDomain) {
+        console.error('Failed to determine shop domain for email subscription');
+        if (errorMsg) {
+          errorMsg.textContent = 'Unable to determine shop. Please refresh the page.';
+          errorMsg.style.display = 'block';
+        }
+        if (buttonText) buttonText.style.display = 'inline';
+        if (spinner) spinner.style.display = 'none';
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+      
       // POST to subscribe endpoint
       fetch('/apps/announceflow/api/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Shop-Domain': shopDomain
         },
         body: JSON.stringify({
           email: email,

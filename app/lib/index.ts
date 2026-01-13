@@ -101,6 +101,8 @@ export {
   validateBarType,
   validateBarPosition,
   validateFontSize,
+  validateShippingThreshold,
+  validateCurrency,
   validateBar,
 } from "./validation.server";
 

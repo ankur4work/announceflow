@@ -828,7 +828,7 @@ export default function Dashboard() {
             </BlockStack>
             <Box paddingBlockStart="200">
               <Text as="p" variant="headingLg" fontWeight="bold">
-                $9.99/month
+                $99.00/month
               </Text>
               <Text as="p" variant="bodySm" tone="subdued">
                 7-day free trial included

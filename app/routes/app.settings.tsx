@@ -51,7 +51,7 @@ import {
 
 // Plan constants (client-side safe)
 const PLAN_NAME = "AnnounceFlow Premium";
-const PLAN_PRICE = 9.99;
+const PLAN_PRICE = 99.00;
 import { ColorPicker } from "../components";
 import type { GlobalSettings, BarPosition } from "../lib/types";
 
@@ -116,7 +116,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   // Handle subscription upgrade
   if (intent === "upgrade") {
     try {
-      const returnUrl = `https://${shopDomain}/admin/apps/announceflow/app/settings?upgraded=true`;
+      // Construct return URL (callback) - must use the billing callback endpoint
+      const url = new URL(request.url);
+      const returnUrl = `${url.origin}/api/billing/callback`;
+      
       const confirmationUrl = await createSubscription(admin, returnUrl);
       return json<ActionData>({
         success: true,
@@ -127,7 +130,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json<ActionData>(
         {
           success: false,
-          error: "Failed to create subscription. Please try again.",
+          error: error instanceof Error ? error.message : "Failed to create subscription. Please try again.",
         },
         { status: 500 }
       );
@@ -274,8 +277,12 @@ export default function Settings() {
     if (actionData) {
       if (actionData.success) {
         if (actionData.redirectUrl) {
-          // Redirect to Shopify billing page
-          window.open(actionData.redirectUrl, "_top");
+          // Redirect to Shopify billing page - use window.top for embedded apps
+          if (window.top) {
+            window.top.location.href = actionData.redirectUrl;
+          } else {
+            window.location.href = actionData.redirectUrl;
+          }
         } else if (actionData.message) {
           shopify.toast.show(actionData.message);
           setIsDirty(false);

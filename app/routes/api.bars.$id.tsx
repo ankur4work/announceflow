@@ -28,6 +28,8 @@ import {
   validateBarPosition,
   validateFontSize,
   validateCookieDuration,
+  validateShippingThreshold,
+  validateCurrency,
 } from "../lib/validation.server";
 
 // GET /api/bars/:id - Get single bar
@@ -193,13 +195,15 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         );
       }
 
-      // Validate text content
-      const textCheck = validateBarText(body.content?.text);
-      if (!textCheck.valid) {
-        return json(
-          { success: false, error: textCheck.error },
-          { status: 400 }
-        );
+      // Validate text content (not required for free_shipping or cookie_consent)
+      if (body.type !== "free_shipping" && body.type !== "cookie_consent") {
+        const textCheck = validateBarText(body.content?.text);
+        if (!textCheck.valid) {
+          return json(
+            { success: false, error: textCheck.error },
+            { status: 400 }
+          );
+        }
       }
 
       // Validate priority if provided
@@ -312,34 +316,107 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         }
       }
 
+      // Validate free shipping bars specifically
+      if (body.type === "free_shipping") {
+        const thresholdCheck = validateShippingThreshold(body.content?.threshold);
+        if (!thresholdCheck.valid) {
+          return json(
+            { success: false, error: thresholdCheck.error },
+            { status: 400 }
+          );
+        }
+        const currencyCheck = validateCurrency(body.content?.currency);
+        if (!currencyCheck.valid) {
+          return json(
+            { success: false, error: currencyCheck.error },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Build content object based on bar type
+      const content: any = {};
+      
+      if (body.type === "free_shipping") {
+        content.threshold = body.content?.threshold;
+        content.currency = body.content?.currency;
+        content.message_template = body.content?.message_template;
+        content.success_message = body.content?.success_message;
+        // Free shipping bars may have optional text
+        if (body.content?.text) {
+          content.text = body.content.text;
+        }
+      } else if (body.type === "email_signup") {
+        content.text = body.content?.text;
+        content.placeholder = body.content?.placeholder;
+        content.button_text = body.content?.button_text;
+        content.success_message = body.content?.success_message;
+        content.error_message = body.content?.error_message;
+      } else if (body.type === "cookie_consent") {
+        content.text = body.content?.text;
+        content.accept_text = body.content?.accept_text;
+        content.decline_text = body.content?.decline_text;
+        content.privacy_link = body.content?.privacy_link;
+        content.privacy_text = body.content?.privacy_text;
+      } else {
+        // Promotional, announcement, countdown
+        content.text = body.content?.text;
+        content.cta_text = body.content?.cta_text;
+        content.cta_link = body.content?.cta_link;
+        content.cta_style = body.content?.cta_style as CTAStyle;
+        if (body.type === "countdown") {
+          content.end_datetime = body.content?.end_datetime;
+          content.expired_text = body.content?.expired_text;
+        }
+      }
+
+      // Build style object
+      const style: any = {
+        position: body.style?.position as BarPosition,
+        bg_color: body.style?.bg_color,
+        text_color: body.style?.text_color,
+        font_size: body.style?.font_size as FontSize,
+        padding_vertical: body.style?.padding_vertical,
+        sticky: body.style?.sticky,
+      };
+
+      // Add type-specific style properties
+      if (body.type === "email_signup" || body.type === "cookie_consent") {
+        style.button_bg_color = body.style?.button_bg_color;
+        style.button_text_color = body.style?.button_text_color;
+      }
+
+      if (body.type === "free_shipping") {
+        style.progress_color = body.style?.progress_color;
+        style.progress_bg_color = body.style?.progress_bg_color;
+      }
+
+      // Build settings object
+      const settings: any = {
+        dismissible: body.settings?.dismissible,
+        show_on_mobile: body.settings?.show_on_mobile,
+        show_on_desktop: body.settings?.show_on_desktop,
+        cookie_duration: body.settings?.cookie_duration,
+        hide_when_expired: body.settings?.hide_when_expired,
+      };
+
+      // Add type-specific settings
+      if (body.type === "cookie_consent") {
+        settings.show_decline = body.settings?.show_decline;
+      }
+
+      if (body.type === "free_shipping") {
+        settings.show_progress_bar = body.settings?.show_progress_bar;
+      }
+
       const result = await updateBar(admin, barId, {
         name: body.name,
         type: body.type as BarType,
         enabled: body.enabled,
         priority: body.priority,
-        content: {
-          text: body.content.text,
-          cta_text: body.content.cta_text,
-          cta_link: body.content.cta_link,
-          cta_style: body.content.cta_style as CTAStyle,
-          end_datetime: body.content.end_datetime,
-          expired_text: body.content.expired_text,
-        },
-        style: {
-          position: body.style?.position as BarPosition,
-          bg_color: body.style?.bg_color,
-          text_color: body.style?.text_color,
-          font_size: body.style?.font_size as FontSize,
-          padding_vertical: body.style?.padding_vertical,
-          sticky: body.style?.sticky,
-        },
-        settings: {
-          dismissible: body.settings?.dismissible,
-          show_on_mobile: body.settings?.show_on_mobile,
-          show_on_desktop: body.settings?.show_on_desktop,
-          cookie_duration: body.settings?.cookie_duration,
-          hide_when_expired: body.settings?.hide_when_expired,
-        },
+        content,
+        style,
+        settings,
       });
 
       if (result.success) {
