@@ -4,6 +4,9 @@
  *
  * This endpoint is called from the Theme Extension (storefront), NOT admin.
  * Handles CORS for cross-origin requests from the storefront.
+ * 
+ * Note: This endpoint is accessed via Shopify App Proxy.
+ * The proxy forwards requests from /apps/announceflow/* to this endpoint.
  */
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
@@ -23,10 +26,32 @@ import {
 // CORS headers for storefront requests
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Shop-Domain",
+  "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+  "Access-Control-Allow-Headers": "Content-Type, X-Shop-Domain, X-Requested-With",
   "Access-Control-Max-Age": "86400", // 24 hours
 };
+
+/**
+ * Normalize shop domain to ensure consistent format
+ * Removes protocol, www, trailing slashes, and ensures .myshopify.com format
+ */
+function normalizeShopDomain(domain: string): string {
+  let normalized = domain
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/$/, '');
+  
+  // If it doesn't end with .myshopify.com, try to find a matching pattern
+  if (!normalized.includes('.myshopify.com')) {
+    // Try to extract myshopify.com domain from custom domain
+    // For now, just use the domain as-is
+    console.log(`[Subscribe] Using non-myshopify domain: ${normalized}`);
+  }
+  
+  return normalized;
+}
 
 /**
  * Handle CORS preflight requests
@@ -73,14 +98,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Get client IP for rate limiting
     const clientIP = getClientIP(request);
 
-    // Get shop domain from header
-    const shopDomain = request.headers.get("X-Shop-Domain");
+    // Get shop domain from header or URL params (app proxy may pass it differently)
+    const url = new URL(request.url);
+    let shopDomain = request.headers.get("X-Shop-Domain") || url.searchParams.get("shop");
+    
+    // Log incoming request for debugging
+    console.log(`[Subscribe] Received request from IP: ${clientIP}`);
+    console.log(`[Subscribe] Shop domain from header: ${request.headers.get("X-Shop-Domain")}`);
+    console.log(`[Subscribe] Shop domain from URL: ${url.searchParams.get("shop")}`);
+    
     if (!shopDomain) {
+      console.error("[Subscribe] No shop domain provided in request");
       return json(
         { success: false, error: "Shop domain is required" },
         { status: 400, headers: CORS_HEADERS }
       );
     }
+
+    // Normalize the shop domain
+    shopDomain = normalizeShopDomain(shopDomain);
+    console.log(`[Subscribe] Normalized shop domain: ${shopDomain}`);
 
     // Rate limit by IP + shop combination
     const rateLimitKey = `subscribe:${shopDomain}:${clientIP}`;
@@ -139,15 +176,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
     }
 
-    // Get shop from database
-    const shop = await getShopByDomain(shopDomain);
+    // Get shop from database - try multiple domain formats
+    let shop = await getShopByDomain(shopDomain);
+    
+    // If not found and domain doesn't end with .myshopify.com, try with .myshopify.com
+    if (!shop && !shopDomain.endsWith('.myshopify.com')) {
+      // Try to find shop with myshopify.com domain that might match
+      console.log(`[Subscribe] Shop not found with domain ${shopDomain}, trying alternate formats...`);
+      
+      // Try removing subdomain parts and adding .myshopify.com
+      const parts = shopDomain.split('.');
+      if (parts.length > 0) {
+        const possibleShopName = parts[0];
+        const altDomain = `${possibleShopName}.myshopify.com`;
+        console.log(`[Subscribe] Trying alternate domain: ${altDomain}`);
+        shop = await getShopByDomain(altDomain);
+      }
+    }
+    
     if (!shop) {
-      console.error(`Shop not found for subscription: ${shopDomain}`);
+      console.error(`[Subscribe] Shop not found for subscription: ${shopDomain}`);
+      console.error(`[Subscribe] Make sure the app is installed for this shop.`);
       return json(
-        { success: false, error: "Shop not found" },
+        { success: false, error: "Shop not found. Please ensure the app is installed." },
         { status: 404, headers: CORS_HEADERS }
       );
     }
+    
+    console.log(`[Subscribe] Found shop: ${shop.shopDomain} (ID: ${shop.id})`);
+
 
     // Check if shop was uninstalled
     if (shop.uninstalledAt) {

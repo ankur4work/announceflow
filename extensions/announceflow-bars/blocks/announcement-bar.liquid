@@ -636,6 +636,13 @@
         return;
       }
       
+      // Log subscription attempt for debugging
+      console.log('[AnnounceFlow] Submitting email subscription:', {
+        email: email,
+        barId: barId,
+        shopDomain: shopDomain
+      });
+
       // POST to subscribe endpoint
       fetch('/apps/announceflow/api/subscribe', {
         method: 'POST',
@@ -649,9 +656,12 @@
         })
       })
       .then(function(response) {
+        console.log('[AnnounceFlow] Response status:', response.status);
         return response.json();
       })
       .then(function(data) {
+        console.log('[AnnounceFlow] Response data:', data);
+        
         // Reset button state
         if (buttonText) buttonText.style.display = 'inline';
         if (spinner) spinner.style.display = 'none';
@@ -675,7 +685,8 @@
             hideBar(bar);
           }, 3000);
         } else {
-          // Error
+          // Error - show specific error message from server
+          console.error('[AnnounceFlow] Subscription error:', data.error);
           if (errorMsg) {
             errorMsg.textContent = data.error || bar.getAttribute('data-error-message') || 'Something went wrong. Please try again.';
             errorMsg.style.display = 'block';
@@ -683,13 +694,15 @@
         }
       })
       .catch(function(err) {
+        console.error('[AnnounceFlow] Network error:', err);
+        
         // Reset button state
         if (buttonText) buttonText.style.display = 'inline';
         if (spinner) spinner.style.display = 'none';
         if (submitBtn) submitBtn.disabled = false;
 
         if (errorMsg) {
-          errorMsg.textContent = 'Something went wrong. Please try again.';
+          errorMsg.textContent = 'Network error. Please check your connection and try again.';
           errorMsg.style.display = 'block';
         }
       });
