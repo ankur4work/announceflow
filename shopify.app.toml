@@ -2,7 +2,6 @@
 
 client_id = "d75e0f39c1aa3f085ecc8e5f096d0793"
 name = "AnnounceFlow"
-icon = "icons/announceflowlog.png"
 application_url = "https://example.com"
 embedded = true
 
