@@ -1,57 +1,102 @@
 /**
  * Webhook Dispatcher: /webhooks
- * Routes GDPR compliance webhooks to their respective handlers.
- * Returns 401 for any authentication failure.
+ * Handles GDPR compliance webhooks with manual HMAC verification.
+ * Always returns 401 for invalid HMAC (never 500).
  */
 
 import type { ActionFunctionArgs } from "@remix-run/node";
-import { authenticate } from "../shopify.server";
+import crypto from "crypto";
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  console.log("[webhooks] Received request");
+// Verify HMAC signature
+function verifyHmac(body: string, hmacHeader: string | null, secret: string): boolean {
+  if (!hmacHeader || !secret) {
+    return false;
+  }
 
   try {
-    // authenticate.webhook() handles HMAC verification
-    // It throws an error with a Response for invalid HMAC
-    const { payload, topic, shop } = await authenticate.webhook(request);
+    const calculatedHmac = crypto
+      .createHmac("sha256", secret)
+      .update(body, "utf8")
+      .digest("base64");
 
-    console.log(`[webhooks] Authenticated: topic=${topic}, shop=${shop}`);
+    // Use timing-safe comparison
+    const a = Buffer.from(calculatedHmac);
+    const b = Buffer.from(hmacHeader);
 
-    const { shop_domain, customer } = payload as any;
+    if (a.length !== b.length) {
+      return false;
+    }
 
-    // Route to appropriate handler based on topic
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  // Always return 401 for non-POST requests
+  if (request.method !== "POST") {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const secret = process.env.SHOPIFY_API_SECRET || "";
+  const hmacHeader = request.headers.get("X-Shopify-Hmac-Sha256");
+  const topic = request.headers.get("X-Shopify-Topic");
+
+  // Read body
+  let body: string;
+  try {
+    body = await request.text();
+  } catch {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Verify HMAC - return 401 if invalid
+  if (!verifyHmac(body, hmacHeader, secret)) {
+    console.log(`[webhooks] Invalid HMAC for topic: ${topic}`);
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  console.log(`[webhooks] Valid HMAC for topic: ${topic}`);
+
+  // Parse payload
+  let payload: any;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return new Response("Bad Request", { status: 400 });
+  }
+
+  const { shop_domain, customer } = payload;
+
+  // Route to appropriate handler
+  try {
     switch (topic) {
-      case "CUSTOMERS_DATA_REQUEST": {
+      case "customers/data_request": {
         const { processDataRequest } = await import("../lib/webhook-handlers.server");
-        return processDataRequest(shop_domain || shop, customer);
+        return processDataRequest(shop_domain, customer);
       }
-      case "CUSTOMERS_REDACT": {
+      case "customers/redact": {
         const { processCustomerRedact } = await import("../lib/webhook-handlers.server");
-        return processCustomerRedact(shop_domain || shop, customer);
+        return processCustomerRedact(shop_domain, customer);
       }
-      case "SHOP_REDACT": {
+      case "shop/redact": {
         const { processShopRedact } = await import("../lib/webhook-handlers.server");
-        return processShopRedact(shop_domain || shop);
+        return processShopRedact(shop_domain);
       }
       default:
         console.log(`[webhooks] Unknown topic: ${topic}`);
-        return new Response(JSON.stringify({ message: "Unknown topic" }), {
-          status: 400,
+        // For unknown topics, still return 200 as Shopify expects acknowledgment
+        return new Response(JSON.stringify({ message: "OK" }), {
+          status: 200,
           headers: { "Content-Type": "application/json" },
         });
     }
-  } catch (error: unknown) {
-    console.error("[webhooks] Error:", error);
-
-    // If authenticate.webhook throws a Response, return it directly
-    if (error instanceof Response) {
-      return error;
-    }
-
-    // For any other error, return 401 Unauthorized
-    // This ensures Shopify's HMAC test gets a 401, not 500
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
+  } catch (error) {
+    console.error(`[webhooks] Handler error:`, error);
+    // Return 200 even on handler errors - HMAC was valid
+    return new Response(JSON.stringify({ message: "OK" }), {
+      status: 200,
       headers: { "Content-Type": "application/json" },
     });
   }
