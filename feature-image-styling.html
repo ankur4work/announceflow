@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1600, height=900">
+  <title>AnnounceFlow - Styling & Positioning Feature</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 1600px;
+      height: 900px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0d9488 0%, #06b6d4 50%, #0ea5e9 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 60px;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 44px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+    }
+
+    .header p {
+      font-size: 20px;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
+    /* Main Content */
+    .main-content {
+      display: flex;
+      gap: 40px;
+      flex: 1;
+      width: 100%;
+      max-width: 1480px;
+    }
+
+    /* Store Mockup */
+    .store-mockup {
+      flex: 1;
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+    }
+
+    .browser-window {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 100%;
+      position: relative;
+    }
+
+    .browser-chrome {
+      background: #f0f0f0;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot.red { background: #FF5F56; }
+    .dot.yellow { background: #FFBD2E; }
+    .dot.green { background: #27CA3F; }
+
+    .address-bar {
+      flex: 1;
+      background: white;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .store-content {
+      position: relative;
+      height: calc(100% - 42px);
+      background: #fafafa;
+    }
+
+    /* Announcement Bars in Store */
+    .bar-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #E74C3C, #c0392b);
+      color: white;
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .bar-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #1E3A5F, #2c5282);
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .countdown {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .countdown-box {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .countdown-num {
+      font-size: 16px;
+      font-weight: 700;
+      display: block;
+    }
+
+    .countdown-label {
+      font-size: 8px;
+      opacity: 0.8;
+    }
+
+    .bar-corner {
+      position: absolute;
+      bottom: 60px;
+      right: 12px;
+      background: linear-gradient(135deg, #27AE60, #1e8449);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      font-size: 12px;
+      max-width: 200px;
+    }
+
+    .bar-corner-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .email-form {
+      display: flex;
+      gap: 6px;
+    }
+
+    .email-input {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      width: 100px;
+      background: rgba(255,255,255,0.95);
+    }
+
+    .email-btn {
+      padding: 6px 10px;
+      background: #1E3A5F;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .bar-side {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      transform: translateY(-50%);
+      background: linear-gradient(180deg, #9B59B6, #8e44ad);
+      color: white;
+      padding: 16px 10px;
+      border-radius: 8px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 11px;
+      font-weight: 500;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* Store Placeholder Content */
+    .store-header {
+      padding: 60px 30px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .store-logo {
+      width: 100px;
+      height: 24px;
+      background: #e0e0e0;
+      border-radius: 4px;
+    }
+
+    .store-nav {
+      display: flex;
+      gap: 16px;
+    }
+
+    .store-nav span {
+      width: 40px;
+      height: 10px;
+      background: #e0e0e0;
+      border-radius: 3px;
+    }
+
+    .store-hero {
+      padding: 20px 30px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .hero-img {
+      width: 200px;
+      height: 140px;
+      background: linear-gradient(135deg, #e8e8e8, #d8d8d8);
+      border-radius: 8px;
+    }
+
+    .hero-text {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 10px;
+    }
+
+    .hero-text .line {
+      height: 14px;
+      background: #e0e0e0;
+      border-radius: 3px;
+    }
+    .hero-text .line:nth-child(1) { width: 180px; }
+    .hero-text .line:nth-child(2) { width: 140px; height: 10px; }
+    .hero-text .line:nth-child(3) { width: 80px; height: 28px; margin-top: 8px; }
+
+    /* Customization Panel */
+    .customization-panel {
+      width: 420px;
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a1a;
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 12px;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Position Grid */
+    .position-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .position-cell {
+      aspect-ratio: 1.4;
+      background: #f5f5f5;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .position-cell.active {
+      border-color: #0d9488;
+      background: #e6fffa;
+    }
+
+    .position-cell .indicator {
+      position: absolute;
+      background: #0d9488;
+      border-radius: 2px;
+    }
+
+    /* Position indicators */
+    .pos-top .indicator { top: 4px; left: 4px; right: 4px; height: 6px; }
+    .pos-bottom .indicator { bottom: 4px; left: 4px; right: 4px; height: 6px; }
+    .pos-left .indicator { left: 4px; top: 4px; bottom: 4px; width: 6px; }
+    .pos-right .indicator { right: 4px; top: 4px; bottom: 4px; width: 6px; }
+    .pos-tl .indicator { top: 4px; left: 4px; width: 18px; height: 12px; }
+    .pos-tr .indicator { top: 4px; right: 4px; width: 18px; height: 12px; }
+    .pos-bl .indicator { bottom: 4px; left: 4px; width: 18px; height: 12px; }
+    .pos-br .indicator { bottom: 4px; right: 4px; width: 18px; height: 12px; }
+
+    .position-cell:not(.active) .indicator {
+      background: #c0c0c0;
+    }
+
+    /* Color Pickers */
+    .color-row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .color-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .color-picker-label {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .color-input-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .color-preview {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      border: 2px solid #e0e0e0;
+    }
+
+    .color-hex {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: monospace;
+      color: #333;
+    }
+
+    /* Preset Colors */
+    .preset-colors {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .preset-swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .preset-swatch.active {
+      border-color: #333;
+      box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+    }
+
+    /* Font Size Selector */
+    .font-sizes {
+      display: flex;
+      gap: 10px;
+    }
+
+    .font-size-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .font-size-btn.active {
+      border-color: #0d9488;
+      background: #e6fffa;
+    }
+
+    .font-size-btn .size-label {
+      font-weight: 600;
+      color: #333;
+      display: block;
+    }
+
+    .font-size-btn .size-px {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #f8f8f8;
+      border-radius: 8px;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      color: #444;
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: #0d9488;
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* Bottom Features */
+    .features {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .feature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: white;
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      position: relative;
+    }
+
+    .feature-icon .bar-indicator {
+      position: absolute;
+      background: white;
+      border-radius: 2px;
+    }
+
+    .fi-top .bar-indicator { top: 6px; left: 8px; right: 8px; height: 4px; }
+    .fi-bottom .bar-indicator { bottom: 6px; left: 8px; right: 8px; height: 4px; }
+    .fi-left .bar-indicator { left: 6px; top: 8px; bottom: 8px; width: 4px; }
+    .fi-right .bar-indicator { right: 6px; top: 8px; bottom: 8px; width: 4px; }
+    .fi-tl .bar-indicator { top: 6px; left: 6px; width: 14px; height: 10px; }
+    .fi-tr .bar-indicator { top: 6px; right: 6px; width: 14px; height: 10px; }
+    .fi-bl .bar-indicator { bottom: 6px; left: 6px; width: 14px; height: 10px; }
+    .fi-br .bar-indicator { bottom: 6px; right: 6px; width: 14px; height: 10px; }
+
+    .feature-label {
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.9;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>Complete Control Over Style & Position</h1>
+    <p>Customize colors, fonts, and placement to match your brand perfectly</p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Store Mockup -->
+    <div class="store-mockup">
+      <div class="browser-window">
+        <div class="browser-chrome">
+          <div class="traffic-lights">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+          </div>
+          <div class="address-bar">mystore.myshopify.com</div>
+        </div>
+        <div class="store-content">
+          <!-- Top Bar -->
+          <div class="bar-top">
+            <span>&#127881;</span>
+            <span>SUMMER SALE - 25% OFF Everything!</span>
+            <span>&#127881;</span>
+          </div>
+
+          <!-- Side Bar (Left) -->
+          <div class="bar-side">New Arrivals &#8594;</div>
+
+          <!-- Store Content -->
+          <div class="store-header">
+            <div class="store-logo"></div>
+            <div class="store-nav">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="store-hero">
+            <div class="hero-img"></div>
+            <div class="hero-text">
+              <div class="line"></div>
+              <div class="line"></div>
+              <div class="line"></div>
+            </div>
+          </div>
+
+          <!-- Corner Bar -->
+          <div class="bar-corner">
+            <div class="bar-corner-title">Get 10% OFF!</div>
+            <div class="email-form">
+              <input type="text" class="email-input" placeholder="Your email" readonly>
+              <button class="email-btn">Join</button>
+            </div>
+          </div>
+
+          <!-- Bottom Bar -->
+          <div class="bar-bottom">
+            <span>Flash Sale Ends In:</span>
+            <div class="countdown">
+              <div class="countdown-box">
+                <span class="countdown-num">02</span>
+                <span class="countdown-label">HRS</span>
+              </div>
+              <div class="countdown-box">
+                <span class="countdown-num">15</span>
+                <span class="countdown-label">MIN</span>
+              </div>
+              <div class="countdown-box">
+                <span class="countdown-num">30</span>
+                <span class="countdown-label">SEC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customization Panel -->
+    <div class="customization-panel">
+      <div class="panel-title">Customize Your Bar</div>
+
+      <!-- Position -->
+      <div class="section">
+        <div class="section-label">Position</div>
+        <div class="position-grid">
+          <div class="position-cell pos-tl"><div class="indicator"></div></div>
+          <div class="position-cell pos-top active"><div class="indicator"></div></div>
+          <div class="position-cell pos-tr"><div class="indicator"></div></div>
+          <div class="position-cell pos-left"><div class="indicator"></div></div>
+          <div class="position-cell" style="background: #fafafa; border-style: dashed;"></div>
+          <div class="position-cell pos-right"><div class="indicator"></div></div>
+          <div class="position-cell pos-bl"><div class="indicator"></div></div>
+          <div class="position-cell pos-bottom"><div class="indicator"></div></div>
+          <div class="position-cell pos-br"><div class="indicator"></div></div>
+        </div>
+      </div>
+
+      <!-- Colors -->
+      <div class="section">
+        <div class="section-label">Colors</div>
+        <div class="color-row">
+          <div class="color-picker">
+            <div class="color-picker-label">Background</div>
+            <div class="color-input-group">
+              <div class="color-preview" style="background: #E74C3C;"></div>
+              <input type="text" class="color-hex" value="#E74C3C" readonly>
+            </div>
+          </div>
+          <div class="color-picker">
+            <div class="color-picker-label">Text</div>
+            <div class="color-input-group">
+              <div class="color-preview" style="background: #FFFFFF; border-color: #ccc;"></div>
+              <input type="text" class="color-hex" value="#FFFFFF" readonly>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preset Colors -->
+      <div class="section">
+        <div class="section-label">Preset Colors</div>
+        <div class="preset-colors">
+          <div class="preset-swatch" style="background: #1E3A5F;"></div>
+          <div class="preset-swatch active" style="background: #E74C3C;"></div>
+          <div class="preset-swatch" style="background: #27AE60;"></div>
+          <div class="preset-swatch" style="background: #F39C12;"></div>
+          <div class="preset-swatch" style="background: #9B59B6;"></div>
+          <div class="preset-swatch" style="background: #000000;"></div>
+          <div class="preset-swatch" style="background: #FFFFFF; border: 1px solid #ddd;"></div>
+        </div>
+      </div>
+
+      <!-- Font Size -->
+      <div class="section">
+        <div class="section-label">Font Size</div>
+        <div class="font-sizes">
+          <div class="font-size-btn">
+            <span class="size-label" style="font-size: 14px;">Aa</span>
+            <span class="size-px">Small</span>
+          </div>
+          <div class="font-size-btn active">
+            <span class="size-label" style="font-size: 16px;">Aa</span>
+            <span class="size-px">Medium</span>
+          </div>
+          <div class="font-size-btn">
+            <span class="size-label" style="font-size: 18px;">Aa</span>
+            <span class="size-px">Large</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dismissible Toggle -->
+      <div class="section">
+        <div class="toggle-row">
+          <span class="toggle-label">Allow visitors to dismiss</span>
+          <div class="toggle"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Position Features -->
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon fi-top"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Top</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-bottom"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Bottom</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-left"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Left Side</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-right"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Right Side</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-tl"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Top Left</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-tr"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Top Right</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-bl"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Bottom Left</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon fi-br"><div class="bar-indicator"></div></div>
+      <div class="feature-label">Bottom Right</div>
+    </div>
+  </div>
+</body>
+</html>
