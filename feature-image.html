@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1600, height=900">
+  <title>AnnounceFlow Feature Image</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 1600px;
+      height: 900px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 50px 80px 40px;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+    }
+
+    .header p {
+      font-size: 22px;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
+    /* Devices Container */
+    .devices {
+      display: flex;
+      gap: 60px;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    /* Laptop Mockup */
+    .laptop {
+      width: 780px;
+    }
+
+    .laptop-screen {
+      background: #1a1a1a;
+      border-radius: 12px 12px 0 0;
+      padding: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .laptop-browser {
+      background: #f5f5f5;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .browser-chrome {
+      background: #e8e8e8;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 6px;
+    }
+
+    .traffic-light {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .traffic-light.red { background: #FF5F56; }
+    .traffic-light.yellow { background: #FFBD2E; }
+    .traffic-light.green { background: #27CA3F; }
+
+    .address-bar {
+      flex: 1;
+      background: white;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .address-bar svg {
+      width: 14px;
+      height: 14px;
+      color: #27CA3F;
+    }
+
+    .browser-content {
+      background: white;
+      min-height: 380px;
+      position: relative;
+    }
+
+    /* Store Content Placeholder */
+    .store-header {
+      padding: 20px 30px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .store-logo {
+      width: 120px;
+      height: 28px;
+      background: #e8e8e8;
+      border-radius: 4px;
+    }
+
+    .store-nav {
+      display: flex;
+      gap: 20px;
+    }
+
+    .store-nav span {
+      width: 50px;
+      height: 12px;
+      background: #e8e8e8;
+      border-radius: 3px;
+    }
+
+    .store-hero {
+      padding: 30px;
+      display: flex;
+      gap: 30px;
+    }
+
+    .hero-image {
+      width: 280px;
+      height: 200px;
+      background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+      border-radius: 8px;
+    }
+
+    .hero-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-top: 20px;
+    }
+
+    .hero-text .line {
+      height: 16px;
+      background: #e8e8e8;
+      border-radius: 4px;
+    }
+
+    .hero-text .line:nth-child(1) { width: 80%; }
+    .hero-text .line:nth-child(2) { width: 60%; height: 12px; }
+    .hero-text .line:nth-child(3) { width: 100px; height: 36px; margin-top: 10px; }
+
+    .laptop-base {
+      background: linear-gradient(to bottom, #c0c0c0 0%, #a0a0a0 100%);
+      height: 18px;
+      border-radius: 0 0 4px 4px;
+      position: relative;
+    }
+
+    .laptop-base::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 5px;
+      background: #888;
+      border-radius: 0 0 3px 3px;
+    }
+
+    .laptop-bottom {
+      background: linear-gradient(to bottom, #d0d0d0 0%, #b0b0b0 100%);
+      height: 10px;
+      width: 110%;
+      margin-left: -5%;
+      border-radius: 0 0 8px 8px;
+    }
+
+    /* Announcement Bars in Laptop */
+    .announcement-bar {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+    }
+
+    .bar-promotional {
+      background: linear-gradient(90deg, #E74C3C 0%, #c0392b 100%);
+    }
+
+    .bar-promotional .icon {
+      font-size: 18px;
+    }
+
+    .bar-countdown {
+      background: linear-gradient(90deg, #1E3A5F 0%, #2c5282 100%);
+      gap: 16px;
+    }
+
+    .countdown-label {
+      opacity: 0.9;
+    }
+
+    .countdown-timer {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .countdown-unit {
+      background: rgba(255,255,255,0.2);
+      padding: 6px 10px;
+      border-radius: 4px;
+      text-align: center;
+      min-width: 50px;
+    }
+
+    .countdown-number {
+      font-size: 20px;
+      font-weight: 700;
+      display: block;
+    }
+
+    .countdown-text {
+      font-size: 9px;
+      opacity: 0.8;
+      text-transform: uppercase;
+    }
+
+    .countdown-separator {
+      font-size: 20px;
+      font-weight: 700;
+      opacity: 0.7;
+    }
+
+    .bar-freeshipping {
+      background: linear-gradient(90deg, #27AE60 0%, #1e8449 100%);
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 20px;
+    }
+
+    .progress-container {
+      width: 300px;
+      height: 8px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 60%;
+      background: white;
+      border-radius: 4px;
+    }
+
+    /* Phone Mockup */
+    .phone {
+      width: 280px;
+    }
+
+    .phone-frame {
+      background: #1a1a1a;
+      border-radius: 36px;
+      padding: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .phone-screen {
+      background: white;
+      border-radius: 28px;
+      overflow: hidden;
+      min-height: 500px;
+      position: relative;
+    }
+
+    .phone-notch {
+      width: 120px;
+      height: 28px;
+      background: #1a1a1a;
+      border-radius: 0 0 16px 16px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .phone-notch::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+    }
+
+    /* Phone Bars */
+    .bar-cookie {
+      background: linear-gradient(90deg, #9B59B6 0%, #8e44ad 100%);
+      padding: 10px 14px;
+      font-size: 11px;
+    }
+
+    .cookie-text {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .cookie-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .cookie-btn {
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .cookie-btn.accept {
+      background: white;
+      color: #9B59B6;
+    }
+
+    .cookie-btn.decline {
+      background: transparent;
+      border: 1px solid white;
+      color: white;
+    }
+
+    .bar-email {
+      background: linear-gradient(90deg, #F39C12 0%, #d68910 100%);
+      padding: 12px 14px;
+      font-size: 12px;
+    }
+
+    .email-text {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .email-form {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .email-input {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      width: 120px;
+      background: rgba(255,255,255,0.95);
+      color: #333;
+    }
+
+    .email-btn {
+      padding: 6px 12px;
+      background: #1E3A5F;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .bar-targeted {
+      background: linear-gradient(90deg, #2c5282 0%, #1E3A5F 100%);
+      padding: 10px 14px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .bar-targeted .wave {
+      font-size: 16px;
+    }
+
+    /* Phone Store Content */
+    .phone-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .phone-logo {
+      width: 80px;
+      height: 20px;
+      background: #e8e8e8;
+      border-radius: 3px;
+    }
+
+    .phone-menu {
+      width: 24px;
+      height: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .phone-menu span {
+      height: 2px;
+      background: #ccc;
+      border-radius: 1px;
+    }
+
+    .phone-content {
+      padding: 16px;
+    }
+
+    .phone-image {
+      width: 100%;
+      height: 160px;
+      background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .phone-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .phone-lines .line {
+      height: 12px;
+      background: #e8e8e8;
+      border-radius: 3px;
+    }
+
+    .phone-lines .line:nth-child(1) { width: 90%; }
+    .phone-lines .line:nth-child(2) { width: 70%; }
+
+    /* Features Section */
+    .features {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+    }
+
+    .feature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: white;
+    }
+
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .feature-label {
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      max-width: 100px;
+      opacity: 0.95;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>Engage Customers with Smart Announcement Bars</h1>
+    <p>Drive sales, grow your email list, and boost conversions</p>
+  </div>
+
+  <!-- Devices -->
+  <div class="devices">
+    <!-- Laptop -->
+    <div class="laptop">
+      <div class="laptop-screen">
+        <div class="laptop-browser">
+          <div class="browser-chrome">
+            <div class="traffic-lights">
+              <div class="traffic-light red"></div>
+              <div class="traffic-light yellow"></div>
+              <div class="traffic-light green"></div>
+            </div>
+            <div class="address-bar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              mystore.myshopify.com
+            </div>
+          </div>
+          <div class="browser-content">
+            <!-- Promotional Bar -->
+            <div class="announcement-bar bar-promotional">
+              <span class="icon">&#127881;</span>
+              <span>SUMMER SALE - 25% OFF Everything!</span>
+              <span class="icon">&#127881;</span>
+            </div>
+
+            <!-- Countdown Timer Bar -->
+            <div class="announcement-bar bar-countdown">
+              <span class="countdown-label">Flash Sale Ends In:</span>
+              <div class="countdown-timer">
+                <div class="countdown-unit">
+                  <span class="countdown-number">02</span>
+                  <span class="countdown-text">Hours</span>
+                </div>
+                <span class="countdown-separator">:</span>
+                <div class="countdown-unit">
+                  <span class="countdown-number">15</span>
+                  <span class="countdown-text">Mins</span>
+                </div>
+                <span class="countdown-separator">:</span>
+                <div class="countdown-unit">
+                  <span class="countdown-number">30</span>
+                  <span class="countdown-text">Secs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Free Shipping Progress Bar -->
+            <div class="announcement-bar bar-freeshipping">
+              <span>Spend $25 more for FREE shipping!</span>
+              <div class="progress-container">
+                <div class="progress-fill"></div>
+              </div>
+            </div>
+
+            <!-- Store Header -->
+            <div class="store-header">
+              <div class="store-logo"></div>
+              <div class="store-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <!-- Store Hero -->
+            <div class="store-hero">
+              <div class="hero-image"></div>
+              <div class="hero-text">
+                <div class="line"></div>
+                <div class="line"></div>
+                <div class="line"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="laptop-base"></div>
+      <div class="laptop-bottom"></div>
+    </div>
+
+    <!-- Phone -->
+    <div class="phone">
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+
+          <!-- Cookie Consent Bar -->
+          <div class="announcement-bar bar-cookie">
+            <div class="cookie-text">We use cookies to enhance your experience</div>
+            <div class="cookie-buttons">
+              <button class="cookie-btn accept">Accept</button>
+              <button class="cookie-btn decline">Decline</button>
+            </div>
+          </div>
+
+          <!-- Email Capture Bar -->
+          <div class="announcement-bar bar-email">
+            <div class="email-text">Get 10% OFF your first order!</div>
+            <div class="email-form">
+              <input type="text" class="email-input" placeholder="Enter your email" readonly>
+              <button class="email-btn">Subscribe</button>
+            </div>
+          </div>
+
+          <!-- Targeted Messaging Bar -->
+          <div class="announcement-bar bar-targeted">
+            <span class="wave">&#128075;</span>
+            <span>Welcome back! Here's a special offer just for you</span>
+          </div>
+
+          <!-- Phone Content -->
+          <div class="phone-header">
+            <div class="phone-logo"></div>
+            <div class="phone-menu">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-image"></div>
+            <div class="phone-lines">
+              <div class="line"></div>
+              <div class="line"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">&#128227;</div>
+      <div class="feature-label">Promotional Announcements</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#9203;</div>
+      <div class="feature-label">Countdown Timers</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128666;</div>
+      <div class="feature-label">Free Shipping Progress</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128274;</div>
+      <div class="feature-label">Cookie Consent</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#9993;</div>
+      <div class="feature-label">Email Capture</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#127919;</div>
+      <div class="feature-label">Targeted Messaging</div>
+    </div>
+  </div>
+</body>
+</html>
