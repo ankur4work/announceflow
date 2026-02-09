@@ -38,7 +38,11 @@
       "Bash(node -e:*)",
       "Bash(ls:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(cmd //c \"taskkill /PID 26048 /F\")",
+      "Bash(cmd //c \"taskkill /PID 14380 /F\")",
+      "Bash(cmd //c \"tasklist | findstr node\")",
+      "Bash(cmd //c \"taskkill /IM node.exe /F\")"
     ]
   }
 }
