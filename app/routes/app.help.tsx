@@ -459,9 +459,9 @@ export default function Help() {
 
             <FAQItem question="What's the difference between Free and Premium?">
               Free plan: 1 announcement bar, includes "Powered by AnnounceFlow"
-              branding. Premium plan ($9.99/month): Unlimited bars, email capture
-              functionality, no branding, priority support. You can upgrade
-              anytime from the Settings page.
+              branding. Premium plan ($99/month, 7-day free trial): Unlimited
+              bars, email capture functionality, no branding, priority support.
+              You can upgrade anytime from the Settings page.
             </FAQItem>
 
             <FAQItem question="How do I export my email subscribers?">

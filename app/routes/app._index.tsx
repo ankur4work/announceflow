@@ -43,7 +43,9 @@ import {
 
 import { authenticate } from "../shopify.server";
 import { getBarsConfig, deleteBar, toggleBarEnabled } from "../lib/metafields.server";
-import { getShopByDomain } from "../lib/db.server";
+import { getShopByDomain, updateShopPlan } from "../lib/db.server";
+import { getActiveSubscription } from "../lib/billing.server";
+import { onPlanUpgrade } from "../lib/metafields.server";
 import type { Bar } from "../lib/types";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -56,7 +58,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     // Get actual plan from database
     const shop = await getShopByDomain(session.shop);
-    const isPremium = shop?.plan === "PREMIUM";
+    let isPremium = shop?.plan === "PREMIUM";
+
+    // Self-heal plan state from Shopify if DB is stale.
+    if (!isPremium) {
+      const activeSub = await getActiveSubscription(admin);
+      if (activeSub && (activeSub.status === "ACTIVE" || activeSub.status === "PENDING")) {
+        await updateShopPlan(session.shop, "PREMIUM");
+        await onPlanUpgrade(session.shop, admin);
+        isPremium = true;
+      }
+    }
     
     return json({
       bars: config.bars,
@@ -814,6 +826,13 @@ export default function Dashboard() {
                 method: "POST",
               });
               const data = await response.json();
+
+              if (data.success && data.alreadyActive) {
+                shopify.toast.show("Premium is already active for this store.");
+                setUpgradeModalOpen(false);
+                revalidator.revalidate();
+                return;
+              }
 
               if (data.success && data.confirmationUrl) {
                 // Redirect to Shopify billing confirmation page

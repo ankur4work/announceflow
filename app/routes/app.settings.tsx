@@ -35,16 +35,19 @@ import {
 import { authenticate } from "../shopify.server";
 import {
   getBarsConfig,
+  onPlanUpgrade,
   updateGlobalSettings,
 } from "../lib/metafields.server";
 import {
   getShopByDomain,
   prisma,
   deleteAllSubscribers,
+  updateShopPlan,
 } from "../lib/db.server";
 import {
   hasActivePremiumPlan,
   createSubscription,
+  getActiveSubscription,
 } from "../lib/billing.server";
 
 // Plan constants (client-side safe)
@@ -76,8 +79,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const shopDomain = session.shop;
 
-  // Check premium status
-  const isPremium = await hasActivePremiumPlan(shopDomain);
+  // Check premium status and self-heal DB plan from Shopify subscription state
+  let isPremium = await hasActivePremiumPlan(shopDomain);
+  if (!isPremium) {
+    const activeSub = await getActiveSubscription(admin);
+    if (activeSub && (activeSub.status === "ACTIVE" || activeSub.status === "PENDING")) {
+      await updateShopPlan(shopDomain, "PREMIUM");
+      await onPlanUpgrade(shopDomain, admin);
+      isPremium = true;
+    }
+  }
 
   // Get global settings from metafields
   const barsConfig = await getBarsConfig(admin);
@@ -114,6 +125,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   // Handle subscription upgrade
   if (intent === "upgrade") {
     try {
+      // If subscription already exists in Shopify, sync local plan instead of throwing.
+      const activeSub = await getActiveSubscription(admin);
+      if (activeSub && (activeSub.status === "ACTIVE" || activeSub.status === "PENDING")) {
+        await updateShopPlan(shopDomain, "PREMIUM");
+        await onPlanUpgrade(shopDomain, admin);
+        return json<ActionData>({
+          success: true,
+          message: "Premium plan is already active for this store.",
+        });
+      }
+
       // Construct return URL (callback) - must use the billing callback endpoint
       // Include shop parameter so callback can authenticate properly
       const url = new URL(request.url);
@@ -398,6 +420,9 @@ export default function Settings() {
                 <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
                     Upgrade to Premium for ${PLAN_PRICE}/month
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Includes a 7-day free trial.
                   </Text>
                   <BlockStack gap="100">
                     <Text as="p" variant="bodySm" tone="subdued">

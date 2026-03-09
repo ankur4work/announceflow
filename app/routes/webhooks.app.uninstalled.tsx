@@ -8,7 +8,7 @@
 import { json } from "@remix-run/node";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { verifyWebhookHMAC } from "../lib/webhook.server";
-import { markShopUninstalled } from "../lib/db.server";
+import { markShopUninstalled, updateShopPlan } from "../lib/db.server";
 import prisma from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -46,6 +46,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       // 3. Mark as uninstalled
       await markShopUninstalled(shopDomain);
+      await updateShopPlan(shopDomain, "FREE");
       console.log(`Shop ${shopDomain} marked as uninstalled`);
 
       // 4. Clean up sessions (Optional, but good practice)

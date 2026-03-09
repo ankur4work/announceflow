@@ -1091,9 +1091,8 @@
   font-family: inherit;
 }
 
-/* Ensure text doesn't inherit theme link styles */
-.announceflow-bar a,
-.announceflow-bar__cta {
+/* Ensure generic links don't inherit theme link styles */
+.announceflow-bar a:not(.announceflow-bar__cta) {
   text-decoration: none;
   color: inherit;
 }
@@ -1102,9 +1101,8 @@
   text-decoration: underline;
 }
 
-/* Override theme's global link hover colors */
-.announceflow-bar a:hover,
-.announceflow-bar__cta:hover {
+/* Override theme's global link hover colors for non-CTA links */
+.announceflow-bar a:not(.announceflow-bar__cta):hover {
   color: inherit;
 }
 

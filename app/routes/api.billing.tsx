@@ -7,8 +7,9 @@
 import { json } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { getShopByDomain } from "../lib/db.server";
+import { getShopByDomain, updateShopPlan } from "../lib/db.server";
 import { getActiveSubscription, createSubscription } from "../lib/billing.server";
+import { onPlanUpgrade } from "../lib/metafields.server";
 
 // GET /api/billing - Status
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -39,9 +40,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-        const { admin } = await authenticate.admin(request);
+        const { admin, session } = await authenticate.admin(request);
         const url = new URL(request.url);
-        const returnUrl = `${url.origin}/api/billing/callback`;
+        const returnUrl = `${url.origin}/api/billing/callback?shop=${encodeURIComponent(session.shop)}`;
+
+        const activeSub = await getActiveSubscription(admin);
+        if (activeSub && (activeSub.status === "ACTIVE" || activeSub.status === "PENDING")) {
+            await updateShopPlan(session.shop, "PREMIUM");
+            await onPlanUpgrade(session.shop, admin);
+            return json({
+                success: true,
+                alreadyActive: true,
+            });
+        }
 
         const confirmationUrl = await createSubscription(admin, returnUrl);
 

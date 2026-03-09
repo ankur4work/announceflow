@@ -3,9 +3,9 @@
  * Handles recurring application charges for the Premium plan.
  */
 
-import { json, redirect } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { getShopByDomain, updateShopPlan } from "./db.server";
+import { getShopByDomain } from "./db.server";
 
 // Define generic AdminClient interface
 interface AdminClient {
@@ -15,6 +15,7 @@ interface AdminClient {
 export const PLAN_NAME = "AnnounceFlow Premium";
 export const PLAN_PRICE = 99.00;
 export const CURRENCY_CODE = "USD";
+export const PLAN_TRIAL_DAYS = 7;
 
 // Determine if we should use test mode
 // Test mode is enabled if:
@@ -31,10 +32,11 @@ console.log(`[Billing] Configuration - Test mode: ${USE_TEST_MODE}, NODE_ENV: ${
 // GraphQL Mutations & Queries
 // Create two versions: one with test mode, one without
 const APP_SUBSCRIPTION_CREATE_WITH_TEST = `#graphql
-  mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $amount: Decimal!) {
+  mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $amount: Decimal!, $trialDays: Int!) {
     appSubscriptionCreate(
       name: $name
       returnUrl: $returnUrl
+      trialDays: $trialDays
       test: true
       lineItems: [{
         plan: {
@@ -59,10 +61,11 @@ const APP_SUBSCRIPTION_CREATE_WITH_TEST = `#graphql
 `;
 
 const APP_SUBSCRIPTION_CREATE_PRODUCTION = `#graphql
-  mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $amount: Decimal!) {
+  mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $amount: Decimal!, $trialDays: Int!) {
     appSubscriptionCreate(
       name: $name
       returnUrl: $returnUrl
+      trialDays: $trialDays
       lineItems: [{
         plan: {
           appRecurringPricingDetails: {
@@ -86,19 +89,6 @@ const APP_SUBSCRIPTION_CREATE_PRODUCTION = `#graphql
   }
 `;
 
-const APP_SUBSCRIPTION_QUERY = `#graphql
-  mutation AppSubscriptionQuery {
-    appInstallation {
-      activeSubscriptions {
-        id
-        name
-        status
-        test
-      }
-    }
-  }
-`;
-
 /**
  * Create a new recurring subscription
  */
@@ -107,11 +97,18 @@ export async function createSubscription(
     returnUrl: string
 ): Promise<string> {
     try {
+        // Do not create a duplicate charge if subscription already exists.
+        const existingSubscription = await getActiveSubscription(admin);
+        if (existingSubscription) {
+            throw new Error("An active Premium subscription already exists for this store.");
+        }
+
         // Build variables object
         const variables = {
             name: PLAN_NAME,
             returnUrl,
             amount: PLAN_PRICE,
+            trialDays: PLAN_TRIAL_DAYS,
         };
         
         // Use the appropriate query based on test mode
@@ -159,6 +156,10 @@ export async function createSubscription(
                     "For development, ensure you're using a development store and test mode is enabled."
                 );
             }
+
+            if (errorMessages.includes("already has an active payment")) {
+                throw new Error("This store already has an active Premium subscription.");
+            }
             
             throw new Error(errorMessages);
         }
@@ -193,6 +194,10 @@ export async function createSubscription(
                     "Billing API requires the app to be published to the Shopify App Store for production use. " +
                     "For development, ensure you're using a development store and test mode is enabled."
                 );
+            }
+
+            if (errorMessages.includes("already has an active payment")) {
+                throw new Error("This store already has an active Premium subscription.");
             }
             
             throw new Error(errorMessages);
