@@ -2,7 +2,7 @@
 
 client_id = "d75e0f39c1aa3f085ecc8e5f096d0793"
 name = "AnnounceFlow"
-application_url = "https://announceflow-six.vercel.app"
+application_url = "https://announceflow-six-pi.vercel.app"
 embedded = true
 
 [webhooks]
@@ -29,10 +29,10 @@ api_version = "2026-04"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://announceflow-six.vercel.app/auth/callback" ]
+redirect_urls = [ "https://announceflow-six-pi.vercel.app/auth/callback" ]
 
 [app_proxy]
-url = "https://announceflow-six.vercel.app/apps/announceflow"
+url = "https://announceflow-six-pi.vercel.app/apps/announceflow"
 subpath = "announceflow"
 prefix = "apps"
 
