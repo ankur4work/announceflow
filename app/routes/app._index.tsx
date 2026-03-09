@@ -337,9 +337,6 @@ export default function Dashboard() {
 
   // Calculate stats
   const activeBars = validBars.filter((bar) => bar.enabled).length;
-  const totalViews = validBars.reduce((sum, bar) => sum + (bar.analytics?.views || 0), 0);
-  const totalClicks = validBars.reduce((sum, bar) => sum + (bar.analytics?.clicks || 0), 0);
-  const clickRate = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0";
 
   // Handle toggle bar enabled
   const handleToggle = useCallback((bar: Bar) => {
@@ -689,31 +686,6 @@ export default function Dashboard() {
 
           <Layout.Section variant="oneThird">
             <BlockStack gap="500">
-              {/* Quick Stats */}
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">Quick Stats</Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">Total Bars</Text>
-                      <Badge>{validBars.length.toString()}</Badge>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">Active Bars</Text>
-                      <Badge tone="success">{activeBars.toString()}</Badge>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">Total Views</Text>
-                      <Text as="span" variant="bodyMd">{totalViews.toLocaleString()}</Text>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">Click Rate</Text>
-                      <Text as="span" variant="bodyMd">{clickRate}%</Text>
-                    </InlineStack>
-                  </BlockStack>
-                </BlockStack>
-              </Card>
-
               {/* Current Plan */}
               <Card>
                 <BlockStack gap="300">
