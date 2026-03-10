@@ -3,7 +3,7 @@
  * GET: Handles the redirect from Shopify after charge approval/decline
  */
 
-import { redirect } from "@remix-run/node";
+import { redirect as remixRedirect } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { getActiveSubscription } from "../lib/billing.server";
@@ -15,16 +15,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const callbackUrl = new URL(request.url);
     const shopFromQuery = callbackUrl.searchParams.get("shop");
     const normalizedShopFromQuery = shopFromQuery ? normalizeShopDomain(shopFromQuery) : null;
-    const appRedirect = (status: string, reason?: string, shop?: string) => {
+    let embeddedRedirect: ((url: string, init?: { target?: "_self" | "_parent" | "_top" | "_blank" }) => Response) | null = null;
+
+    const appRedirect = (status: string, reason?: string, shop?: string): Response => {
         const params = new URLSearchParams({ billing: status });
         const resolvedShop = shop || normalizedShopFromQuery;
         if (resolvedShop) params.set("shop", resolvedShop);
         if (reason) params.set("reason", reason);
-        return redirect(`/app?${params.toString()}`);
+        const destination = `/app?${params.toString()}`;
+        if (embeddedRedirect) {
+            return embeddedRedirect(destination, { target: "_parent" });
+        }
+        return remixRedirect(destination);
     };
 
     try {
-        const { session, admin } = await authenticate.admin(request);
+        const { session, admin, redirect } = await authenticate.admin(request);
+        embeddedRedirect = redirect;
         const url = callbackUrl;
         const normalizedShop = normalizeShopDomain(session.shop);
 
@@ -66,6 +73,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         return appRedirect("failed", undefined, normalizedShop);
     } catch (error) {
         console.error("Error handling billing callback:", error);
+        if (normalizedShopFromQuery) {
+            return remixRedirect(`/auth/login?shop=${encodeURIComponent(normalizedShopFromQuery)}`);
+        }
         return appRedirect("error");
     }
 };
