@@ -421,9 +421,6 @@ export default function Settings() {
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
                     Upgrade to Premium for ${PLAN_PRICE}/month
                   </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Includes a 7-day free trial.
-                  </Text>
                   <BlockStack gap="100">
                     <Text as="p" variant="bodySm" tone="subdued">
                       - Unlimited announcement bars
