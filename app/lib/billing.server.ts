@@ -15,7 +15,7 @@ interface AdminClient {
 export const PLAN_NAME = "AnnounceFlow Premium";
 export const PLAN_PRICE = 99.00;
 export const CURRENCY_CODE = "USD";
-export const PLAN_TRIAL_DAYS = 7;
+export const PLAN_TRIAL_DAYS = 0;
 
 // Determine if we should use test mode
 // Test mode is enabled if:

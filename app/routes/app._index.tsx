@@ -789,7 +789,7 @@ export default function Dashboard() {
         onClose={() => setUpgradeModalOpen(false)}
         title="Upgrade to Premium"
         primaryAction={{
-          content: isUpgrading ? "Processing..." : "Start Free Trial",
+          content: isUpgrading ? "Processing..." : "Upgrade Now",
           loading: isUpgrading,
           onAction: async () => {
             setIsUpgrading(true);
@@ -832,7 +832,7 @@ export default function Dashboard() {
       >
         <Modal.Section>
           <BlockStack gap="500">
-            {/* Free Trial Banner */}
+            {/* Premium Banner */}
             <Box
               background="bg-surface-success"
               padding="400"
@@ -840,10 +840,10 @@ export default function Dashboard() {
             >
               <BlockStack gap="100">
                 <Text as="p" variant="headingMd" fontWeight="bold">
-                  Start Your 7-Day Free Trial
+                  Upgrade to Premium
                 </Text>
                 <Text as="p" variant="bodySm">
-                  Try Premium risk-free. Cancel anytime.
+                  Unlock all features. Cancel anytime.
                 </Text>
               </BlockStack>
             </Box>
@@ -921,9 +921,6 @@ export default function Dashboard() {
             <Divider />
             <Box>
               <BlockStack gap="100" inlineAlign="center">
-                <Text as="p" variant="bodySm" tone="subdued">
-                  After your free trial
-                </Text>
                 <Text as="p" variant="headingLg" fontWeight="bold">
                   $99/month
                 </Text>
